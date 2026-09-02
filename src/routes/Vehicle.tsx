@@ -1,6 +1,7 @@
 import { useReducer } from "react"
 import { Link, useParams } from "react-router"
 
+import { DemoControls } from "@/components/DemoControls"
 import { PackagePanel } from "@/components/PackagePanel"
 import { PhoneMock } from "@/components/PhoneMock"
 import { RecordChecks } from "@/components/RecordChecks"
@@ -52,11 +53,6 @@ function VehicleView({ vehicle }: { vehicle: VehicleRecord }) {
     dispatch({ type: "escalate", caseReference: generateCaseReference(new Date()), at: now() })
   const onReset = () => dispatch({ type: "reset", canRequest })
 
-  // onApprove, onDeny, onTimeout and onReset are consumed by PhoneMock (Task 10)
-  // and DemoControls (Task 11). Keep them referenced to satisfy noUnusedLocals.
-  void onTimeout
-  void onReset
-
   return (
     <div className="flex items-start gap-6">
       <div className="flex min-w-0 flex-1 flex-col gap-6">
@@ -73,6 +69,13 @@ function VehicleView({ vehicle }: { vehicle: VehicleRecord }) {
         </div>
       </div>
       <PhoneMock vehicle={vehicle} state={state} onApprove={onApprove} onDeny={onDeny} />
+      <DemoControls
+        state={state}
+        onApprove={onApprove}
+        onDeny={onDeny}
+        onTimeout={onTimeout}
+        onReset={onReset}
+      />
     </div>
   )
 }
