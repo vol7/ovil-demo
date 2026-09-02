@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { describe, expect, it } from "vitest"
 
-import { CLEAN_VIN } from "@/lib/vehicles"
+import { CLEAN_VIN, CLONED_VIN } from "@/lib/vehicles"
 import { Vehicle } from "./Vehicle"
 
 function renderVehicle(vin: string) {
@@ -36,5 +37,19 @@ describe("Vehicle route", () => {
       "href",
       "/lookup"
     )
+  })
+
+  it("starts idle for the clean vehicle and moves to pending on request", async () => {
+    renderVehicle(CLEAN_VIN)
+    await userEvent.click(screen.getByRole("button", { name: /request owner authorization/i }))
+    expect(screen.getByText("Request sent to registered owner")).toBeInTheDocument()
+  })
+
+  it("starts blocked for the cloned vehicle and can escalate", async () => {
+    renderVehicle(CLONED_VIN)
+    expect(screen.getByRole("button", { name: /request owner authorization/i })).toBeDisabled()
+    await userEvent.click(screen.getByRole("button", { name: /escalate/i }))
+    expect(screen.getByText("Escalated for review")).toBeInTheDocument()
+    expect(screen.getByText(/^OVIL-\d{4}-\d{2}-\d{2}-\d{4}$/)).toBeInTheDocument()
   })
 })
