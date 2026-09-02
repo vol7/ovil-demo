@@ -30,7 +30,9 @@ describe("PhoneMock", () => {
   it("shows the SMS with the code and approve/deny while pending", async () => {
     const { onApprove, onDeny } = renderPhone(pending)
     expect(screen.getByRole("complementary", { name: /registered owner/i })).toBeInTheDocument()
-    expect(screen.getByText(/2023 Mercedes-AMG GLE 63 S 4MATIC\+ \(plate CKXR 214\)/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/2023 Mercedes-AMG GLE 63 S 4MATIC\+ \(plate CKXR 214\)/)
+    ).toBeInTheDocument()
     expect(screen.getByText(/482 193/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: /^approve$/i }))
     expect(onApprove).toHaveBeenCalledTimes(1)

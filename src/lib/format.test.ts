@@ -39,6 +39,9 @@ describe("maskName", () => {
   it("handles single-letter parts", () => {
     expect(maskName("A Li")).toBe("A* L*")
   })
+  it("returns an empty string for an empty name", () => {
+    expect(maskName("")).toBe("")
+  })
 })
 
 describe("formatOdometer", () => {

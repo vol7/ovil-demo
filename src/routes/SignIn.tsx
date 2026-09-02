@@ -3,13 +3,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -24,9 +18,7 @@ export function SignIn() {
         <CardHeader>
           <div className="mb-2 flex items-center gap-2 text-primary">
             <Lock className="size-4" aria-hidden />
-            <span className="text-xs font-semibold tracking-wide uppercase">
-              OVIL
-            </span>
+            <span className="text-xs font-semibold tracking-wide uppercase">OVIL</span>
           </div>
           <CardTitle>
             <h1 className="text-base font-medium">Authorized User Portal</h1>

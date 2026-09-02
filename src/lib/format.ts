@@ -10,6 +10,7 @@ export function maskName(fullName: string): string {
   return fullName
     .trim()
     .split(/\s+/)
+    .filter(Boolean)
     .map((part) => part[0] + "*".repeat(Math.max(part.length - 1, 1)))
     .join(" ")
 }

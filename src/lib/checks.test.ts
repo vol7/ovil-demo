@@ -27,11 +27,7 @@ describe("evaluateChecks", () => {
 
   it("fails write-off, collision and duplicate for the cloned vehicle", () => {
     const checks = evaluateChecks(cloned)
-    expect(failingChecks(checks).map((c) => c.id)).toEqual([
-      "writeOff",
-      "collision",
-      "duplicate",
-    ])
+    expect(failingChecks(checks).map((c) => c.id)).toEqual(["writeOff", "collision", "duplicate"])
     expect(allPass(checks)).toBe(false)
   })
 

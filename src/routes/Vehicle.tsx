@@ -68,7 +68,9 @@ function VehicleView({ vehicle }: { vehicle: VehicleRecord }) {
           />
         </div>
       </div>
-      <PhoneMock vehicle={vehicle} state={state} onApprove={onApprove} onDeny={onDeny} />
+      <div className={canRequest ? "w-[300px] shrink-0" : undefined}>
+        <PhoneMock vehicle={vehicle} state={state} onApprove={onApprove} onDeny={onDeny} />
+      </div>
       <DemoControls
         state={state}
         onApprove={onApprove}

@@ -38,7 +38,7 @@ describe("PackagePanel", () => {
   it("blocked: request disabled with reason, escalate available", async () => {
     const { onEscalate } = renderPanel({ status: "blocked" }, cloned)
     expect(screen.getByRole("button", { name: /request owner authorization/i })).toBeDisabled()
-    expect(screen.getByText(/3 record check\(s\) failed/)).toBeInTheDocument()
+    expect(screen.getByText(/3 record checks failed/)).toBeInTheDocument()
     expect(screen.getByText("Transaction blocked")).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: /escalate/i }))
     expect(onEscalate).toHaveBeenCalledTimes(1)
@@ -46,7 +46,11 @@ describe("PackagePanel", () => {
 
   it("escalated: shows the case reference", () => {
     renderPanel(
-      { status: "escalated", caseReference: "OVIL-2026-09-02-0417", escalatedAt: "2026-09-02T18:16:30.000Z" },
+      {
+        status: "escalated",
+        caseReference: "OVIL-2026-09-02-0417",
+        escalatedAt: "2026-09-02T18:16:30.000Z",
+      },
       cloned
     )
     expect(screen.getByText("Escalated for review")).toBeInTheDocument()
@@ -58,7 +62,7 @@ describe("PackagePanel", () => {
       status: "pending",
       otp: "482 193",
       sentAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000 - 1000).toISOString(),
     })
     expect(screen.getByText("Request sent to registered owner")).toBeInTheDocument()
     expect(screen.getByText(/^23:59:5\d$/)).toBeInTheDocument()

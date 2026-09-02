@@ -33,10 +33,7 @@ describe("Vehicle route", () => {
   it("shows not-found for an unknown VIN with a way back", () => {
     renderVehicle("1HGCM82633A004352")
     expect(screen.getByText(/no record found/i)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /back to lookup/i })).toHaveAttribute(
-      "href",
-      "/lookup"
-    )
+    expect(screen.getByRole("link", { name: /back to lookup/i })).toHaveAttribute("href", "/lookup")
   })
 
   it("starts idle for the clean vehicle and moves to pending on request", async () => {

@@ -10,12 +10,11 @@ export function PortalShell() {
       <header className="border-b bg-background">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
           <Link to="/lookup" className="flex items-baseline gap-2">
-            <span className="text-sm font-semibold tracking-wide text-primary uppercase">
-              OVIL
+            <span className="text-sm font-semibold tracking-wide text-primary uppercase">OVIL</span>
+            <span className="text-sm text-muted-foreground" aria-hidden>
+              ·
             </span>
-            <span className="text-sm text-muted-foreground">
-              Authorized User Portal
-            </span>
+            <span className="text-sm text-muted-foreground">Authorized User Portal</span>
           </Link>
           <div className="flex items-center gap-4 text-sm">
             <div className="text-right leading-tight">

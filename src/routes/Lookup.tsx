@@ -3,21 +3,14 @@ import { useState } from "react"
 import { useNavigate } from "react-router"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { isValidVin, normalizeVin } from "@/lib/format"
 import { DEMO_VEHICLES, findVehicle, vehicleTitle } from "@/lib/vehicles"
 
-const INVALID_MESSAGE =
-  "Enter a 17-character VIN (letters I, O and Q are not used)."
+const INVALID_MESSAGE = "Enter a 17-character VIN (letters I, O and Q are not used)."
 const NOT_FOUND_MESSAGE = "No record found for this VIN."
 
 export function Lookup() {
@@ -103,12 +96,8 @@ export function Lookup() {
                 className="flex w-full items-center justify-between gap-4 rounded-md px-2 py-3 text-left hover:bg-muted"
                 onClick={() => navigate(`/vehicle/${vehicle.vin}`)}
               >
-                <span className="font-mono text-sm tracking-wider">
-                  {vehicle.vin}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {vehicleTitle(vehicle)}
-                </span>
+                <span className="font-mono text-sm tracking-wider">{vehicle.vin}</span>
+                <span className="text-sm text-muted-foreground">{vehicleTitle(vehicle)}</span>
               </button>
             </div>
           ))}

@@ -95,11 +95,11 @@ describe("authorizationReducer", () => {
 
   it("ignores invalid transitions and returns the same state object", () => {
     const blocked = initialState(false)
-    expect(
-      authorizationReducer(blocked, { type: "request", otp: "000 000", at: T0 })
-    ).toBe(blocked)
+    expect(authorizationReducer(blocked, { type: "request", otp: "000 000", at: T0 })).toBe(blocked)
     const idle = initialState(true)
-    expect(authorizationReducer(idle, { type: "approve", authorizationCode: "x", at: T0 })).toBe(idle)
+    expect(authorizationReducer(idle, { type: "approve", authorizationCode: "x", at: T0 })).toBe(
+      idle
+    )
     expect(authorizationReducer(idle, { type: "escalate", caseReference: "x", at: T0 })).toBe(idle)
     const authorized = authorizationReducer(pending(), {
       type: "approve",
@@ -120,8 +120,6 @@ describe("code generators", () => {
     expect(code).toMatch(/^OV-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/)
   })
   it("generateCaseReference embeds the date and a 4-digit sequence", () => {
-    expect(generateCaseReference(new Date(2026, 8, 2), () => 0.0417)).toBe(
-      "OVIL-2026-09-02-0417"
-    )
+    expect(generateCaseReference(new Date(2026, 8, 2), () => 0.0417)).toBe("OVIL-2026-09-02-0417")
   })
 })

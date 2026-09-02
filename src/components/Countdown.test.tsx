@@ -5,7 +5,7 @@ import { Countdown } from "./Countdown"
 
 describe("Countdown", () => {
   it("renders the remaining time as HH:MM:SS", () => {
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000 - 1000).toISOString()
     render(<Countdown expiresAt={expiresAt} />)
     expect(screen.getByText(/^23:59:5\d$/)).toBeInTheDocument()
   })

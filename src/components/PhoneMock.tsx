@@ -71,7 +71,9 @@ export function PhoneMock({ vehicle, state, onApprove, onDeny }: Props) {
                 {state.status === "frozen" && state.reason === "denied" ? (
                   <>
                     <Bubble from="owner">NO</Bubble>
-                    <Bubble from="ovil">Understood. The transaction has been frozen and flagged for review.</Bubble>
+                    <Bubble from="ovil">
+                      Understood. The transaction has been frozen and flagged for review.
+                    </Bubble>
                   </>
                 ) : null}
 

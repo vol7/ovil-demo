@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { isValidVin } from "./format"
-import {
-  CLEAN_VIN,
-  CLONED_VIN,
-  DEMO_VEHICLES,
-  findVehicle,
-  vehicleTitle,
-} from "./vehicles"
+import { CLEAN_VIN, CLONED_VIN, DEMO_VEHICLES, findVehicle, vehicleTitle } from "./vehicles"
 
 describe("DEMO_VEHICLES", () => {
   it("contains two vehicles with valid, unique VINs", () => {
@@ -42,8 +36,6 @@ describe("findVehicle", () => {
 
 describe("vehicleTitle", () => {
   it("joins year, make, model and trim", () => {
-    expect(vehicleTitle(findVehicle(CLEAN_VIN)!)).toBe(
-      "2023 Mercedes-AMG GLE 63 S 4MATIC+"
-    )
+    expect(vehicleTitle(findVehicle(CLEAN_VIN)!)).toBe("2023 Mercedes-AMG GLE 63 S 4MATIC+")
   })
 })

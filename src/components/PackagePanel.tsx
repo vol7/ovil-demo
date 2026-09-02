@@ -78,98 +78,102 @@ export function PackagePanel({ vehicle, checks, state, onRequest, onEscalate }: 
           <Button size="lg" disabled={requestDisabled} onClick={onRequest}>
             Request owner authorization
           </Button>
-          {canRequest ? (
+          {canRequest && state.status === "idle" ? (
             <p className="text-sm text-muted-foreground">
               A one-time code will be sent to the registered owner&apos;s phone ending in{" "}
               {vehicle.owner.phoneLast4}.
             </p>
-          ) : (
+          ) : null}
+          {!canRequest ? (
             <p className="text-sm text-destructive">
-              Authorization unavailable: {failing.length} record check(s) failed.
+              Authorization unavailable: {failing.length} record{" "}
+              {failing.length === 1 ? "check" : "checks"} failed.
             </p>
-          )}
+          ) : null}
         </div>
 
-        <motion.div
-          key={state.status}
-          initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-        >
-          {state.status === "blocked" ? (
-            <StatusBox
-              tone="danger"
-              icon={<ShieldAlert className="size-4 text-destructive" aria-hidden />}
-              title="Transaction blocked"
-            >
-              <p className="text-sm text-muted-foreground">
-                This VIN cannot be transferred until the flagged records are resolved.
-              </p>
-              <div className="mt-2">
-                <Button variant="destructive" onClick={onEscalate}>
-                  Escalate to Insurance Hub / Law Enforcement
-                </Button>
-              </div>
-            </StatusBox>
-          ) : null}
+        {state.status === "idle" ? null : (
+          <motion.div
+            key={state.status}
+            initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            {state.status === "blocked" ? (
+              <StatusBox
+                tone="danger"
+                icon={<ShieldAlert className="size-4 text-destructive" aria-hidden />}
+                title="Transaction blocked"
+              >
+                <p className="text-sm text-muted-foreground">
+                  This VIN cannot be transferred until the flagged records are resolved.
+                </p>
+                <div className="mt-2">
+                  <Button variant="destructive" onClick={onEscalate}>
+                    Escalate to Insurance Hub / Law Enforcement
+                  </Button>
+                </div>
+              </StatusBox>
+            ) : null}
 
-          {state.status === "escalated" ? (
-            <StatusBox
-              tone="danger"
-              icon={<ShieldAlert className="size-4 text-destructive" aria-hidden />}
-              title="Escalated for review"
-            >
-              <p className="text-sm text-muted-foreground">
-                Do not release the vehicle. Case opened at {formatTime(state.escalatedAt)}
-              </p>
-              <p className="font-mono text-sm tracking-wider">{state.caseReference}</p>
-            </StatusBox>
-          ) : null}
+            {state.status === "escalated" ? (
+              <StatusBox
+                tone="danger"
+                icon={<ShieldAlert className="size-4 text-destructive" aria-hidden />}
+                title="Escalated for review"
+              >
+                <p className="text-sm text-muted-foreground">
+                  Do not release the vehicle. Case opened at {formatTime(state.escalatedAt)}
+                </p>
+                <p className="font-mono text-sm tracking-wider">{state.caseReference}</p>
+              </StatusBox>
+            ) : null}
 
-          {state.status === "pending" ? (
-            <StatusBox
-              tone="info"
-              icon={<Clock className="size-4 text-primary" aria-hidden />}
-              title="Request sent to registered owner"
-            >
-              <p className="text-sm text-muted-foreground">
-                Expires in <Countdown expiresAt={state.expiresAt} />
-              </p>
-              <p className="text-sm text-muted-foreground">Waiting for response…</p>
-            </StatusBox>
-          ) : null}
+            {state.status === "pending" ? (
+              <StatusBox
+                tone="info"
+                icon={<Clock className="size-4 text-primary" aria-hidden />}
+                title="Request sent to registered owner"
+              >
+                <p className="text-sm text-muted-foreground">
+                  Expires in <Countdown expiresAt={state.expiresAt} />
+                </p>
+                <p className="text-sm text-muted-foreground">Waiting for response…</p>
+              </StatusBox>
+            ) : null}
 
-          {state.status === "authorized" ? (
-            <StatusBox
-              tone="success"
-              icon={<CircleCheck className="size-4 text-emerald-600" aria-hidden />}
-              title="Authorized by registered owner"
-            >
-              <p className="text-sm text-muted-foreground">
-                Approved at {formatTime(state.approvedAt)} · Authorization code
-              </p>
-              <p className="font-mono text-base tracking-wider">{state.authorizationCode}</p>
-              <p className="mt-1 text-sm font-medium text-emerald-700">
-                Clear to proceed with used vehicle package.
-              </p>
-            </StatusBox>
-          ) : null}
+            {state.status === "authorized" ? (
+              <StatusBox
+                tone="success"
+                icon={<CircleCheck className="size-4 text-emerald-600" aria-hidden />}
+                title="Authorized by registered owner"
+              >
+                <p className="text-sm text-muted-foreground">
+                  Approved at {formatTime(state.approvedAt)} · Authorization code
+                </p>
+                <p className="font-mono text-base tracking-wider">{state.authorizationCode}</p>
+                <p className="mt-1 text-sm font-medium text-emerald-700">
+                  Clear to proceed with used vehicle package.
+                </p>
+              </StatusBox>
+            ) : null}
 
-          {state.status === "frozen" ? (
-            <StatusBox
-              tone="neutral"
-              icon={<Snowflake className="size-4 text-primary" aria-hidden />}
-              title="Frozen — flagged for security review"
-            >
-              <p className="text-sm text-muted-foreground">
-                {state.reason === "denied"
-                  ? "Owner denied the request."
-                  : "No response within 24 hours."}{" "}
-                Recorded at {formatTime(state.frozenAt)}
-              </p>
-            </StatusBox>
-          ) : null}
-        </motion.div>
+            {state.status === "frozen" ? (
+              <StatusBox
+                tone="neutral"
+                icon={<Snowflake className="size-4 text-primary" aria-hidden />}
+                title="Frozen — flagged for security review"
+              >
+                <p className="text-sm text-muted-foreground">
+                  {state.reason === "denied"
+                    ? "Owner denied the request."
+                    : "No response within 24 hours."}{" "}
+                  Recorded at {formatTime(state.frozenAt)}
+                </p>
+              </StatusBox>
+            ) : null}
+          </motion.div>
+        )}
       </CardContent>
     </Card>
   )

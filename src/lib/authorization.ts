@@ -87,16 +87,11 @@ export function generateOtp(random: () => number = Math.random): string {
   return `${digits.slice(0, 3)} ${digits.slice(3)}`
 }
 
-export function generateAuthorizationCode(
-  random: () => number = Math.random
-): string {
+export function generateAuthorizationCode(random: () => number = Math.random): string {
   return `OV-${pick(CODE_ALPHABET, 4, random)}-${pick(CODE_ALPHABET, 4, random)}`
 }
 
-export function generateCaseReference(
-  date: Date,
-  random: () => number = Math.random
-): string {
+export function generateCaseReference(date: Date, random: () => number = Math.random): string {
   const yyyy = date.getFullYear()
   const mm = String(date.getMonth() + 1).padStart(2, "0")
   const dd = String(date.getDate()).padStart(2, "0")

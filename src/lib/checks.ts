@@ -1,13 +1,7 @@
 import { formatDate, formatOdometer } from "./format"
 import type { OdometerReading, Vehicle } from "./vehicles"
 
-export type CheckId =
-  | "stolen"
-  | "writeOff"
-  | "collision"
-  | "odometer"
-  | "duplicate"
-  | "lien"
+export type CheckId = "stolen" | "writeOff" | "collision" | "odometer" | "duplicate" | "lien"
 
 export type CheckStatus = "pass" | "fail"
 
@@ -81,11 +75,7 @@ export function evaluateChecks(vehicle: Vehicle): Check[] {
       ? check("duplicate", "fail", r.duplicateIdentity.detail)
       : check("duplicate", "pass", "VIN and plate match a single registration"),
     r.lien
-      ? check(
-          "lien",
-          "fail",
-          `${r.lien.holder} · registered ${formatDate(r.lien.registeredOn)}`
-        )
+      ? check("lien", "fail", `${r.lien.holder} · registered ${formatDate(r.lien.registeredOn)}`)
       : check("lien", "pass", "No lien registered"),
   ]
 }
