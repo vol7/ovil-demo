@@ -52,4 +52,20 @@ describe("Vehicle route", () => {
     expect(screen.getByText("Escalated for review")).toBeInTheDocument()
     expect(screen.getByText(/^OVIL-\d{4}-\d{2}-\d{2}-\d{4}$/)).toBeInTheDocument()
   })
+
+  it("completes the approve loop from the phone", async () => {
+    renderVehicle(CLEAN_VIN)
+    await userEvent.click(screen.getByRole("button", { name: /request owner authorization/i }))
+    await userEvent.click(screen.getByRole("button", { name: /^approve$/i }))
+    expect(screen.getByText("Authorized by registered owner")).toBeInTheDocument()
+    expect(screen.getByText(/^OV-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/)).toBeInTheDocument()
+  })
+
+  it("freezes when the owner denies", async () => {
+    renderVehicle(CLEAN_VIN)
+    await userEvent.click(screen.getByRole("button", { name: /request owner authorization/i }))
+    await userEvent.click(screen.getByRole("button", { name: /^deny$/i }))
+    expect(screen.getByText(/flagged for security review/i)).toBeInTheDocument()
+    expect(screen.getByText(/owner denied the request/i)).toBeInTheDocument()
+  })
 })

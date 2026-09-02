@@ -2,6 +2,7 @@ import { useReducer } from "react"
 import { Link, useParams } from "react-router"
 
 import { PackagePanel } from "@/components/PackagePanel"
+import { PhoneMock } from "@/components/PhoneMock"
 import { RecordChecks } from "@/components/RecordChecks"
 import { VehicleHeader } from "@/components/VehicleHeader"
 import { buttonVariants } from "@/components/ui/button"
@@ -53,24 +54,25 @@ function VehicleView({ vehicle }: { vehicle: VehicleRecord }) {
 
   // onApprove, onDeny, onTimeout and onReset are consumed by PhoneMock (Task 10)
   // and DemoControls (Task 11). Keep them referenced to satisfy noUnusedLocals.
-  void onApprove
-  void onDeny
   void onTimeout
   void onReset
 
   return (
-    <div className="flex flex-col gap-6">
-      <VehicleHeader vehicle={vehicle} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <RecordChecks checks={checks} />
-        <PackagePanel
-          vehicle={vehicle}
-          checks={checks}
-          state={state}
-          onRequest={onRequest}
-          onEscalate={onEscalate}
-        />
+    <div className="flex items-start gap-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
+        <VehicleHeader vehicle={vehicle} />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <RecordChecks checks={checks} />
+          <PackagePanel
+            vehicle={vehicle}
+            checks={checks}
+            state={state}
+            onRequest={onRequest}
+            onEscalate={onEscalate}
+          />
+        </div>
       </div>
+      <PhoneMock vehicle={vehicle} state={state} onApprove={onApprove} onDeny={onDeny} />
     </div>
   )
 }
