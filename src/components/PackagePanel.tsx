@@ -38,7 +38,7 @@ function StatusBox({
     neutral: "border-border bg-muted/50 text-foreground",
   } as const
   return (
-    <div className={`flex gap-3 rounded-lg border p-4 ${tones[tone]}`}>
+    <div role="status" className={`flex gap-3 rounded-lg border p-4 ${tones[tone]}`}>
       <div className="mt-0.5 shrink-0">{icon}</div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="text-sm font-medium">{title}</div>
