@@ -56,7 +56,7 @@ export function Lookup() {
             <div className="flex gap-2">
               <Input
                 id="vin"
-                className="font-mono tracking-wider uppercase"
+                className="font-mono tracking-wider uppercase placeholder:normal-case"
                 maxLength={17}
                 autoComplete="off"
                 spellCheck={false}

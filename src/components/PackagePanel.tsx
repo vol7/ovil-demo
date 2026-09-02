@@ -120,7 +120,7 @@ export function PackagePanel({ vehicle, checks, state, onRequest, onEscalate }: 
               title="Escalated for review"
             >
               <p className="text-sm text-muted-foreground">
-                Case opened at {formatTime(state.escalatedAt)}. Do not release the vehicle.
+                Do not release the vehicle. Case opened at {formatTime(state.escalatedAt)}
               </p>
               <p className="font-mono text-sm tracking-wider">{state.caseReference}</p>
             </StatusBox>
@@ -165,7 +165,7 @@ export function PackagePanel({ vehicle, checks, state, onRequest, onEscalate }: 
                 {state.reason === "denied"
                   ? "Owner denied the request."
                   : "No response within 24 hours."}{" "}
-                Recorded at {formatTime(state.frozenAt)}.
+                Recorded at {formatTime(state.frozenAt)}
               </p>
             </StatusBox>
           ) : null}

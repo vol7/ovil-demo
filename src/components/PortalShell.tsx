@@ -1,7 +1,7 @@
 import { LogOut } from "lucide-react"
 import { Link, Outlet } from "react-router"
 
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { OFFICE } from "@/lib/office"
 
 export function PortalShell() {
@@ -24,15 +24,10 @@ export function PortalShell() {
                 {OFFICE.name} · {OFFICE.counter}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              render={<Link to="/" />}
-              nativeButton={false}
-            >
+            <Link to="/" className={buttonVariants({ variant: "ghost", size: "sm" })}>
               <LogOut aria-hidden />
               Sign out
-            </Button>
+            </Link>
           </div>
         </div>
       </header>
