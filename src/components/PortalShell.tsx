@@ -28,7 +28,7 @@ export function PortalShell() {
               variant="ghost"
               size="sm"
               render={<Link to="/" />}
-              aria-label="Sign out"
+              nativeButton={false}
             >
               <LogOut aria-hidden />
               Sign out
