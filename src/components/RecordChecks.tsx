@@ -2,36 +2,63 @@ import { CircleCheck, CircleX } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { failingChecks, type Check } from "@/lib/checks"
+import { cn } from "@/lib/utils"
 
-export function RecordChecks({ checks }: { checks: Check[] }) {
+export const CHECK_STAGGER_S = 0.08
+export const CHECKS_SETTLE_MS = 700
+
+export function RecordChecks({ checks, onSettled }: { checks: Check[]; onSettled?: () => void }) {
   const reduceMotion = useReducedMotion()
   const failing = failingChecks(checks)
-  const summary =
-    failing.length === 0
-      ? `${checks.length} of ${checks.length} checks passed`
-      : `${failing.length} of ${checks.length} checks failed`
+  const failed = failing.length > 0
+  const summary = failed
+    ? `${failing.length} of ${checks.length} checks failed`
+    : `${checks.length} of ${checks.length} checks passed`
+  const asOf = new Date().toLocaleDateString("en-CA", { month: "short", day: "numeric" })
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Record checks</CardTitle>
-        <CardDescription>{summary}</CardDescription>
+    <Card className="gap-0 py-0">
+      <CardHeader className="border-b py-4">
+        <CardTitle className="flex items-center justify-between gap-3">
+          <span>Record checks</span>
+          <span className="text-xs font-normal text-muted-foreground">
+            {checks.length} sources · as of {asOf}
+          </span>
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="gap-0 px-0 pb-0">
+        <motion.div
+          role="status"
+          className={cn(
+            "flex items-center gap-2.5 border-b px-6 py-3 text-sm font-medium",
+            failed ? "bg-destructive/5 text-destructive" : "bg-emerald-50 text-emerald-700"
+          )}
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: reduceMotion ? 0 : CHECKS_SETTLE_MS / 1000, duration: 0.25 }}
+          onAnimationComplete={onSettled}
+        >
+          {failed ? (
+            <CircleX className="size-4" aria-hidden />
+          ) : (
+            <CircleCheck className="size-4" aria-hidden />
+          )}
+          {summary}
+        </motion.div>
         <motion.ul
           className="flex flex-col divide-y"
           initial={reduceMotion ? false : "hidden"}
           animate="show"
-          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+          variants={{ hidden: {}, show: { transition: { staggerChildren: CHECK_STAGGER_S } } }}
         >
           {checks.map((check) => {
             const pass = check.status === "pass"
             return (
               <motion.li
                 key={check.id}
-                className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+                className="flex items-start gap-3 px-6 py-3.5"
                 variants={{
                   hidden: { opacity: 0, y: 6 },
                   show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
@@ -50,6 +77,7 @@ export function RecordChecks({ checks }: { checks: Check[] }) {
                     </Badge>
                   </div>
                   <span className="text-sm text-muted-foreground">{check.detail}</span>
+                  <span className="text-xs text-muted-foreground/70">{check.source}</span>
                 </div>
               </motion.li>
             )

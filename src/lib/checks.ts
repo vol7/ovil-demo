@@ -10,6 +10,7 @@ export type Check = {
   label: string
   status: CheckStatus
   detail: string
+  source: string
 }
 
 const LABELS: Record<CheckId, string> = {
@@ -21,8 +22,17 @@ const LABELS: Record<CheckId, string> = {
   lien: "Active lien",
 }
 
+export const SOURCES: Record<CheckId, string> = {
+  stolen: "CPIC · Canadian Police Information Centre",
+  writeOff: "Insurance Bureau of Canada",
+  collision: "Ontario collision reporting",
+  odometer: "MTO registration history",
+  duplicate: "MTO vehicle registry",
+  lien: "Ontario PPSR",
+}
+
 function check(id: CheckId, status: CheckStatus, detail: string): Check {
-  return { id, label: LABELS[id], status, detail }
+  return { id, label: LABELS[id], status, detail, source: SOURCES[id] }
 }
 
 function odometerCheck(readings: OdometerReading[]): Check {

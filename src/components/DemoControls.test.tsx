@@ -1,31 +1,26 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
-import type { AuthorizationState } from "@/lib/authorization"
+import { getSessionStore } from "@/lib/session"
+import { CLEAN_VIN } from "@/lib/vehicles"
 import { DemoControls } from "./DemoControls"
 
-const pending: AuthorizationState = {
-  status: "pending",
-  otp: "482 193",
-  sentAt: "2026-09-02T18:14:00.000Z",
-  expiresAt: "2026-09-03T18:14:00.000Z",
-}
-
-function renderControls(state: AuthorizationState) {
-  const handlers = {
-    onApprove: vi.fn(),
-    onDeny: vi.fn(),
-    onTimeout: vi.fn(),
-    onReset: vi.fn(),
-  }
-  render(<DemoControls state={state} {...handlers} />)
-  return handlers
+function openPending() {
+  const store = getSessionStore()
+  store.dispatch({ type: "open", vin: CLEAN_VIN, canRequest: true })
+  store.dispatch({
+    type: "request",
+    otp: "482 193",
+    requester: "Fawaz A.",
+    at: new Date().toISOString(),
+  })
+  return store
 }
 
 describe("DemoControls", () => {
   it("is hidden until Shift+D is pressed, and toggles back off", async () => {
-    renderControls(pending)
+    render(<DemoControls />)
     expect(screen.queryByRole("region", { name: /demo controls/i })).not.toBeInTheDocument()
     await userEvent.keyboard("{Shift>}D{/Shift}")
     expect(screen.getByRole("region", { name: /demo controls/i })).toBeInTheDocument()
@@ -35,31 +30,36 @@ describe("DemoControls", () => {
 
   it("does not toggle when typing in an input", async () => {
     render(<input aria-label="field" />)
-    renderControls(pending)
+    render(<DemoControls />)
     await userEvent.click(screen.getByLabelText("field"))
     await userEvent.keyboard("{Shift>}D{/Shift}")
     expect(screen.queryByRole("region", { name: /demo controls/i })).not.toBeInTheDocument()
   })
 
-  it("dispatches owner actions while pending", async () => {
-    const h = renderControls(pending)
+  it("approves the pending request through the shared session", async () => {
+    const store = openPending()
+    render(<DemoControls />)
     await userEvent.keyboard("{Shift>}D{/Shift}")
     await userEvent.click(screen.getByRole("button", { name: /owner approves/i }))
+    expect(store.getState().authorization.status).toBe("authorized")
+  })
+
+  it("denies, times out, and resets", async () => {
+    const store = openPending()
+    render(<DemoControls />)
+    await userEvent.keyboard("{Shift>}D{/Shift}")
     await userEvent.click(screen.getByRole("button", { name: /owner denies/i }))
-    await userEvent.click(screen.getByRole("button", { name: /simulate 24h timeout/i }))
-    await userEvent.click(screen.getByRole("button", { name: /reset scenario/i }))
-    expect(h.onApprove).toHaveBeenCalledTimes(1)
-    expect(h.onDeny).toHaveBeenCalledTimes(1)
-    expect(h.onTimeout).toHaveBeenCalledTimes(1)
-    expect(h.onReset).toHaveBeenCalledTimes(1)
+    expect(store.getState().authorization).toMatchObject({ status: "frozen", reason: "denied" })
+    await userEvent.click(screen.getByRole("button", { name: /reset session/i }))
+    expect(store.getState()).toEqual({ vin: null, authorization: { status: "idle" } })
   })
 
   it("disables owner actions when not pending", async () => {
-    renderControls({ status: "idle" })
+    render(<DemoControls />)
     await userEvent.keyboard("{Shift>}D{/Shift}")
     expect(screen.getByRole("button", { name: /owner approves/i })).toBeDisabled()
     expect(screen.getByRole("button", { name: /owner denies/i })).toBeDisabled()
     expect(screen.getByRole("button", { name: /simulate 24h timeout/i })).toBeDisabled()
-    expect(screen.getByRole("button", { name: /reset scenario/i })).toBeEnabled()
+    expect(screen.getByRole("button", { name: /reset session/i })).toBeEnabled()
   })
 })

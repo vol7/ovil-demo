@@ -32,7 +32,7 @@ describe("PackagePanel", () => {
     expect(button).toBeEnabled()
     expect(screen.getByText(/phone ending in 0917/)).toBeInTheDocument()
     await userEvent.click(button)
-    expect(onRequest).toHaveBeenCalledTimes(1)
+    expect(onRequest).toHaveBeenCalledWith("Fawaz A.")
   })
 
   it("blocked: request disabled with reason, escalate available", async () => {
@@ -60,6 +60,8 @@ describe("PackagePanel", () => {
   it("pending: shows the countdown", () => {
     renderPanel({
       status: "pending",
+      origin: "clerk",
+      requester: "Fawaz A.",
       otp: "482 193",
       sentAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000 - 1000).toISOString(),
@@ -72,18 +74,61 @@ describe("PackagePanel", () => {
   it("authorized: shows the code and the clear-to-proceed line", () => {
     renderPanel({
       status: "authorized",
+      origin: "clerk",
+      requester: "Fawaz A.",
       otp: "482 193",
       sentAt: "2026-09-02T18:14:00.000Z",
       authorizationCode: "OV-7K2M-9Q3F",
       approvedAt: "2026-09-02T18:16:30.000Z",
+      validUntil: "2026-10-02T18:16:30.000Z",
     })
     expect(screen.getByText("Authorized by registered owner")).toBeInTheDocument()
     expect(screen.getByText("OV-7K2M-9Q3F")).toBeInTheDocument()
     expect(screen.getByText(/clear to proceed with used vehicle package/i)).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /request owner authorization/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it("authorized by owner pre-approval: shows on-file wording and validity", () => {
+    renderPanel({
+      status: "authorized",
+      origin: "owner",
+      requester: "Daniel Okafor",
+      otp: "",
+      sentAt: "2026-09-02T18:14:00.000Z",
+      authorizationCode: "OV-K3PM-7HQ2",
+      approvedAt: "2026-09-02T18:14:00.000Z",
+      validUntil: "2026-10-02T18:14:00.000Z",
+    })
+    expect(screen.getByText("Authorization on file")).toBeInTheDocument()
+    expect(screen.getByText(/pre-approved online by the registered owner/i)).toBeInTheDocument()
+    expect(screen.getByText(/valid until October 2, 2026/)).toBeInTheDocument()
+  })
+
+  it("pending from a buyer: names the buyer", () => {
+    renderPanel({
+      status: "pending",
+      origin: "buyer",
+      requester: "Fawaz Ahmed",
+      otp: "482 193",
+      sentAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+    })
+    expect(screen.getByText("Awaiting registered owner")).toBeInTheDocument()
+    expect(screen.getByText(/requested online by Fawaz Ahmed/i)).toBeInTheDocument()
   })
 
   it("frozen: shows the reason", () => {
-    renderPanel({ status: "frozen", reason: "timeout", frozenAt: "2026-09-02T18:16:30.000Z" })
+    renderPanel({
+      status: "frozen",
+      origin: "clerk",
+      requester: "Fawaz A.",
+      reason: "timeout",
+      otp: "482 193",
+      sentAt: "2026-09-02T18:14:00.000Z",
+      frozenAt: "2026-09-02T18:16:30.000Z",
+    })
     expect(screen.getByText(/flagged for security review/i)).toBeInTheDocument()
     expect(screen.getByText(/no response within 24 hours/i)).toBeInTheDocument()
   })

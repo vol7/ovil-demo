@@ -1,19 +1,40 @@
+/** Who started the authorization. */
+export type Origin = "clerk" | "owner" | "buyer"
+
 export type AuthorizationState =
   | { status: "idle" }
   | { status: "blocked" }
-  | { status: "pending"; otp: string; sentAt: string; expiresAt: string }
+  | {
+      status: "pending"
+      origin: Origin
+      requester: string
+      otp: string
+      sentAt: string
+      expiresAt: string
+    }
   | {
       status: "authorized"
+      origin: Origin
+      requester: string
       otp: string
       sentAt: string
       authorizationCode: string
       approvedAt: string
+      validUntil: string
     }
-  | { status: "frozen"; reason: "denied" | "timeout"; frozenAt: string }
+  | {
+      status: "frozen"
+      origin: Origin
+      requester: string
+      reason: "denied" | "timeout"
+      otp: string
+      sentAt: string
+      frozenAt: string
+    }
   | { status: "escalated"; caseReference: string; escalatedAt: string }
 
 export type AuthorizationAction =
-  | { type: "request"; otp: string; at: string }
+  | { type: "request"; otp: string; requester: string; at: string }
   | { type: "approve"; authorizationCode: string; at: string }
   | { type: "deny"; at: string }
   | { type: "timeout"; at: string }
@@ -21,9 +42,48 @@ export type AuthorizationAction =
   | { type: "reset"; canRequest: boolean }
 
 export const AUTHORIZATION_WINDOW_MS = 24 * 60 * 60 * 1000
+export const PREAPPROVAL_VALIDITY_MS = 30 * 24 * 60 * 60 * 1000
 
 export function initialState(canRequest: boolean): AuthorizationState {
   return canRequest ? { status: "idle" } : { status: "blocked" }
+}
+
+function plus(iso: string, ms: number): string {
+  return new Date(new Date(iso).getTime() + ms).toISOString()
+}
+
+/** Owner verified their identity online: authorization exists immediately. */
+export function preapprovedState(input: {
+  owner: string
+  authorizationCode: string
+  at: string
+}): AuthorizationState {
+  return {
+    status: "authorized",
+    origin: "owner",
+    requester: input.owner,
+    otp: "",
+    sentAt: input.at,
+    authorizationCode: input.authorizationCode,
+    approvedAt: input.at,
+    validUntil: plus(input.at, PREAPPROVAL_VALIDITY_MS),
+  }
+}
+
+/** Buyer asked online: owner is texted, request is pending. */
+export function buyerPendingState(input: {
+  buyer: string
+  otp: string
+  at: string
+}): AuthorizationState {
+  return {
+    status: "pending",
+    origin: "buyer",
+    requester: input.buyer,
+    otp: input.otp,
+    sentAt: input.at,
+    expiresAt: plus(input.at, AUTHORIZATION_WINDOW_MS),
+  }
 }
 
 export function authorizationReducer(
@@ -33,31 +93,51 @@ export function authorizationReducer(
   switch (action.type) {
     case "request": {
       if (state.status !== "idle") return state
-      const sent = new Date(action.at)
       return {
         status: "pending",
+        origin: "clerk",
+        requester: action.requester,
         otp: action.otp,
         sentAt: action.at,
-        expiresAt: new Date(sent.getTime() + AUTHORIZATION_WINDOW_MS).toISOString(),
+        expiresAt: plus(action.at, AUTHORIZATION_WINDOW_MS),
       }
     }
     case "approve": {
       if (state.status !== "pending") return state
       return {
         status: "authorized",
+        origin: state.origin,
+        requester: state.requester,
         otp: state.otp,
         sentAt: state.sentAt,
         authorizationCode: action.authorizationCode,
         approvedAt: action.at,
+        validUntil: plus(action.at, PREAPPROVAL_VALIDITY_MS),
       }
     }
     case "deny": {
       if (state.status !== "pending") return state
-      return { status: "frozen", reason: "denied", frozenAt: action.at }
+      return {
+        status: "frozen",
+        origin: state.origin,
+        requester: state.requester,
+        reason: "denied",
+        otp: state.otp,
+        sentAt: state.sentAt,
+        frozenAt: action.at,
+      }
     }
     case "timeout": {
       if (state.status !== "pending") return state
-      return { status: "frozen", reason: "timeout", frozenAt: action.at }
+      return {
+        status: "frozen",
+        origin: state.origin,
+        requester: state.requester,
+        reason: "timeout",
+        otp: state.otp,
+        sentAt: state.sentAt,
+        frozenAt: action.at,
+      }
     }
     case "escalate": {
       if (state.status !== "blocked") return state
@@ -89,6 +169,11 @@ export function generateOtp(random: () => number = Math.random): string {
 
 export function generateAuthorizationCode(random: () => number = Math.random): string {
   return `OV-${pick(CODE_ALPHABET, 4, random)}-${pick(CODE_ALPHABET, 4, random)}`
+}
+
+/** Short token shown in the SMS link, e.g. ovil.on.ca/c/8K2M. */
+export function generateLinkToken(random: () => number = Math.random): string {
+  return pick(CODE_ALPHABET, 4, random)
 }
 
 export function generateCaseReference(date: Date, random: () => number = Math.random): string {

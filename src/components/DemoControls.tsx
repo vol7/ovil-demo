@@ -2,15 +2,7 @@ import { X } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import type { AuthorizationState } from "@/lib/authorization"
-
-type Props = {
-  state: AuthorizationState
-  onApprove: () => void
-  onDeny: () => void
-  onTimeout: () => void
-  onReset: () => void
-}
+import { useOwnerActions } from "@/hooks/useOwnerActions"
 
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -20,9 +12,28 @@ function isEditable(target: EventTarget | null): boolean {
   )
 }
 
-export function DemoControls({ state, onApprove, onDeny, onTimeout, onReset }: Props) {
+export function OwnerActionButtons({ size = "sm" }: { size?: "sm" | "default" }) {
+  const { pending, approve, deny, timeout, reset } = useOwnerActions()
+  return (
+    <>
+      <Button variant="outline" size={size} disabled={!pending} onClick={approve}>
+        Owner approves
+      </Button>
+      <Button variant="outline" size={size} disabled={!pending} onClick={deny}>
+        Owner denies
+      </Button>
+      <Button variant="outline" size={size} disabled={!pending} onClick={timeout}>
+        Simulate 24h timeout
+      </Button>
+      <Button variant="secondary" size={size} onClick={reset}>
+        Reset session
+      </Button>
+    </>
+  )
+}
+
+export function DemoControls() {
   const [open, setOpen] = useState(false)
-  const pending = state.status === "pending"
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -41,7 +52,7 @@ export function DemoControls({ state, onApprove, onDeny, onTimeout, onReset }: P
   return (
     <section
       aria-label="Demo controls"
-      className="fixed bottom-4 left-4 z-50 w-64 rounded-lg border bg-background p-3 shadow-lg"
+      className="fixed bottom-4 left-4 z-50 w-64 rounded-xl bg-background p-3 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_8px_16px_-4px_oklch(0_0_0/0.08)]"
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -52,18 +63,7 @@ export function DemoControls({ state, onApprove, onDeny, onTimeout, onReset }: P
         </Button>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Button variant="outline" size="sm" disabled={!pending} onClick={onApprove}>
-          Owner approves
-        </Button>
-        <Button variant="outline" size="sm" disabled={!pending} onClick={onDeny}>
-          Owner denies
-        </Button>
-        <Button variant="outline" size="sm" disabled={!pending} onClick={onTimeout}>
-          Simulate 24h timeout
-        </Button>
-        <Button variant="secondary" size="sm" onClick={onReset}>
-          Reset scenario
-        </Button>
+        <OwnerActionButtons />
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">Shift+D to hide</p>
     </section>

@@ -1,38 +1,36 @@
-import { LogOut } from "lucide-react"
-import { Link, Outlet } from "react-router"
+import { Outlet, useLocation, useMatches } from "react-router"
 
-import { buttonVariants } from "@/components/ui/button"
-import { OFFICE } from "@/lib/office"
+import { Sidebar } from "@/components/shell/Sidebar"
+import { TopBar, type Crumb } from "@/components/shell/TopBar"
+import { NAV_ITEMS, isActive } from "@/lib/nav"
+import { findVehicle } from "@/lib/vehicles"
+
+function useCrumbs(): Crumb[] {
+  const { pathname } = useLocation()
+  const matches = useMatches()
+  const nav = NAV_ITEMS.find((item) => isActive(item, pathname))
+  const crumbs: Crumb[] = nav ? [{ label: nav.label, to: nav.to }] : []
+  const vehicleMatch = matches.find((m) => m.params.vin)
+  if (vehicleMatch?.params.vin) {
+    const vehicle = findVehicle(vehicleMatch.params.vin)
+    crumbs.push({ label: vehicle ? `Plate ${vehicle.plate}` : "Not found" })
+  }
+  return crumbs
+}
 
 export function PortalShell() {
+  const crumbs = useCrumbs()
   return (
-    <div className="min-h-svh bg-muted/40">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
-          <Link to="/lookup" className="flex items-baseline gap-2">
-            <span className="text-sm font-semibold tracking-wide text-primary uppercase">OVIL</span>
-            <span className="text-sm text-muted-foreground" aria-hidden>
-              ·
-            </span>
-            <span className="text-sm text-muted-foreground">Authorized User Portal</span>
-          </Link>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="text-right leading-tight">
-              <div className="font-medium">{OFFICE.clerk}</div>
-              <div className="text-xs text-muted-foreground">
-                {OFFICE.name} · {OFFICE.counter}
-              </div>
-            </div>
-            <Link to="/" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-              <LogOut aria-hidden />
-              Sign out
-            </Link>
+    <div className="flex h-svh overflow-hidden bg-muted/40">
+      <Sidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar crumbs={crumbs} />
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[1200px] px-8 py-8">
+            <Outlet />
           </div>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl px-6 py-8">
-        <Outlet />
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

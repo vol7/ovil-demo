@@ -22,7 +22,9 @@ export type Vehicle = {
   plate: string
   registeredOn: string
   odometerKm: number
-  owner: { name: string; phoneLast4: string }
+  owner: { name: string; phoneLast4: string; city: string }
+  lastInspection: string
+  riskTier: "high-value" | "standard"
   records: VehicleRecords
 }
 
@@ -41,7 +43,9 @@ export const DEMO_VEHICLES: Vehicle[] = [
     plate: "CKXR 214",
     registeredOn: "2023-04-18",
     odometerKm: 31240,
-    owner: { name: "Daniel Okafor", phoneLast4: "0917" },
+    owner: { name: "Daniel Okafor", phoneLast4: "0917", city: "Toronto, ON" },
+    lastInspection: "2025-04-11",
+    riskTier: "high-value",
     records: {
       stolenReport: null,
       writeOff: null,
@@ -66,7 +70,9 @@ export const DEMO_VEHICLES: Vehicle[] = [
     plate: "BWTP 903",
     registeredOn: "2025-02-03",
     odometerKm: 8410,
-    owner: { name: "Priya Raghunathan", phoneLast4: "5528" },
+    owner: { name: "Priya Raghunathan", phoneLast4: "5528", city: "Whitby, ON" },
+    lastInspection: "2025-08-20",
+    riskTier: "high-value",
     records: {
       stolenReport: null,
       writeOff: {

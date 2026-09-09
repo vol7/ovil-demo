@@ -1,21 +1,19 @@
-import { useReducer } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router"
 
+import { ActivityTimeline } from "@/components/ActivityTimeline"
 import { DemoControls } from "@/components/DemoControls"
+import { OdometerHistory, OwnershipCard } from "@/components/OwnershipCard"
 import { PackagePanel } from "@/components/PackagePanel"
-import { PhoneMock } from "@/components/PhoneMock"
 import { RecordChecks } from "@/components/RecordChecks"
 import { VehicleHeader } from "@/components/VehicleHeader"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-  authorizationReducer,
-  generateAuthorizationCode,
-  generateCaseReference,
-  generateOtp,
-  initialState,
-} from "@/lib/authorization"
+import { deriveActivity } from "@/lib/activity"
+import { generateCaseReference, generateOtp } from "@/lib/authorization"
 import { allPass, evaluateChecks } from "@/lib/checks"
+import { OFFICE } from "@/lib/office"
+import { useSession } from "@/lib/session"
 import { findVehicle, type Vehicle as VehicleRecord } from "@/lib/vehicles"
 
 export function Vehicle() {
@@ -39,45 +37,54 @@ export function Vehicle() {
 }
 
 function VehicleView({ vehicle }: { vehicle: VehicleRecord }) {
-  const checks = evaluateChecks(vehicle)
+  const checks = useMemo(() => evaluateChecks(vehicle), [vehicle])
   const canRequest = allPass(checks)
-  const [state, dispatch] = useReducer(authorizationReducer, canRequest, initialState)
+  const [session, dispatch] = useSession()
+  const [openedAt] = useState(() => new Date().toISOString())
+  const [settled, setSettled] = useState(false)
+
+  useEffect(() => {
+    dispatch({ type: "open", vin: vehicle.vin, canRequest })
+  }, [dispatch, vehicle.vin, canRequest])
+
+  // Until the store reflects this vehicle, show the initial state for it.
+  const state =
+    session.vin === vehicle.vin
+      ? session.authorization
+      : canRequest
+        ? ({ status: "idle" } as const)
+        : ({ status: "blocked" } as const)
 
   const now = () => new Date().toISOString()
-  const onRequest = () => dispatch({ type: "request", otp: generateOtp(), at: now() })
-  const onApprove = () =>
-    dispatch({ type: "approve", authorizationCode: generateAuthorizationCode(), at: now() })
-  const onDeny = () => dispatch({ type: "deny", at: now() })
-  const onTimeout = () => dispatch({ type: "timeout", at: now() })
+  const onRequest = (applicant: string) =>
+    dispatch({ type: "request", otp: generateOtp(), requester: applicant, at: now() })
   const onEscalate = () =>
     dispatch({ type: "escalate", caseReference: generateCaseReference(new Date()), at: now() })
-  const onReset = () => dispatch({ type: "reset", canRequest })
+
+  const events = deriveActivity(state, openedAt, OFFICE.clerk)
 
   return (
-    <div className="flex items-start gap-6">
-      <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <VehicleHeader vehicle={vehicle} />
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <RecordChecks checks={checks} />
+    <div className="flex flex-col gap-6">
+      <VehicleHeader vehicle={vehicle} blocked={!canRequest} />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <RecordChecks checks={checks} onSettled={() => setSettled(true)} />
+          <OwnershipCard vehicle={vehicle} />
+          <OdometerHistory vehicle={vehicle} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-0">
           <PackagePanel
             vehicle={vehicle}
             checks={checks}
             state={state}
             onRequest={onRequest}
             onEscalate={onEscalate}
+            settled={settled}
           />
+          <ActivityTimeline events={events} />
         </div>
       </div>
-      <div className={canRequest ? "w-[300px] shrink-0" : undefined}>
-        <PhoneMock vehicle={vehicle} state={state} onApprove={onApprove} onDeny={onDeny} />
-      </div>
-      <DemoControls
-        state={state}
-        onApprove={onApprove}
-        onDeny={onDeny}
-        onTimeout={onTimeout}
-        onReset={onReset}
-      />
+      <DemoControls />
     </div>
   )
 }
