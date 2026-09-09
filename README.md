@@ -1,8 +1,9 @@
 # OVIL demo prototype
 
-Clickable prototype of the OVIL clerk portal plus the registered owner's phone,
-built for screen recording two demo scenarios. No backend, no persistence beyond
-the browser, invented data. Specs and plans live in `docs/superpowers/`.
+Clickable prototype of OVIL: a ServiceOntario pre-approval flow, the clerk
+portal, and the registered owner's phone. Built for a screen-recorded demo video
+and for a live walkthrough. No backend, no persistence beyond the browser,
+invented data. Specs and plans live in `docs/superpowers/`.
 
 ## Run
 
@@ -11,8 +12,9 @@ the browser, invented data. Specs and plans live in `docs/superpowers/`.
 
 ## Recording
 
-Open **http://localhost:5173/** (the hub, not part of the product). It opens
-each surface in its own window and shows the live session:
+Open **http://localhost:5173/** (the hub, not part of the product; `/demo`
+redirects here). It opens each surface in its own window and shows the live
+session:
 
 | Surface | Route | Record at |
 | --- | --- | --- |
@@ -49,13 +51,38 @@ theme's fonts and colours so the hand-off feels continuous.
 | 2 · Cloned VIN | `5TDEBRCH7SS041927` | Write-off, collision and duplicate identity fail. Request disabled; escalate. |
 | 3 · Buyer pre-request | `4JGFB8KB5PA812634` | On ServiceOntario choose "Buying this vehicle", send the request; owner taps the SMS link and approves; clerk lookup shows the authorization on file. The owner can also pre-approve directly ("The registered owner"). |
 
-Both are the first two rows under "Recent lookups" so you can click instead of typing.
+The two VINs are the first rows under "Recent lookups" so you can click instead
+of typing. The video covers scenario 3 and scenario 2; the others are there for
+the live walkthrough.
+
+## What each surface does
+
+- **ServiceOntario** (`/serviceontario/` → `/uvip`). The owner verifies with a
+  licence number and a photo and puts a 30-day authorization on file, or a buyer
+  enters their name, licence and mobile and the owner is texted. The public side
+  never shows the plate; the VIN is the identifier and the registered owner is
+  masked.
+- **Phone** (`/phone`). The owner's SMS carries the vehicle, the plate (safe on
+  the owner's side), the requester's name and a 16-character link. The link opens
+  a one-page approve/decline; the browser back chevron is the only way back.
+- **Clerk portal** (`/portal`). Record checks, then the package panel: applicant
+  name, licence and mobile, request owner authorization, and once authorized,
+  issue the package. Failed checks block it and escalate to law enforcement.
+
+## Demo people
+
+| Role | Name | Licence | Mobile |
+| --- | --- | --- | --- |
+| Registered owner (GLE) | Daniel Okafor | `D6101-40706-60905`, matches the specimen card shown in the photo step | ending 0917 |
+| Buyer / applicant | Marcus Beaulieu | `B2947-51083-64712` | ending 4410 |
+
+All invented. Never use a real client or contact name here.
 
 ## Demo controls
 
 Press `Shift+D` on a vehicle page to open the hidden panel: owner approves,
-owner denies, simulate 24h timeout, reset session. The same buttons are always
-visible on `/demo`.
+owner denies, simulate 24h timeout, reset session. The hub at `/` always shows
+the same buttons plus **Force state**.
 
 ## Hosting
 
