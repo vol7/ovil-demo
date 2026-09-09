@@ -1,5 +1,4 @@
 import { ChevronRight } from "lucide-react"
-import { Link } from "react-router"
 
 export type Crumb = { label: string; to?: string }
 
@@ -17,17 +16,13 @@ export function PublicShell({
     <div className="theme-so flex min-h-svh flex-col bg-background text-foreground">
       <header className="bg-[#1a1a1a] text-white">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
-          <Link to="/serviceontario" className="flex items-center gap-2">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-6 text-[#c9b8e6]"
-              aria-hidden
-              fill="currentColor"
-            >
-              <path d="M12 3c1.6 2.2 2.4 4.3 2.4 6.2 0 .5-.1 1-.2 1.5 1.3-1 2.9-1.6 4.8-1.7 1.6 0 3 .4 4 1.1-1.6 2.3-3.6 3.6-5.9 3.9-.5.1-1 .1-1.5 0 1 1.3 1.5 2.9 1.5 4.7 0 1.6-.4 3-1.1 4-2.3-1.6-3.6-3.6-3.9-5.9L12 15.6l-.1 1.2c-.3 2.3-1.6 4.3-3.9 5.9-.7-1-1.1-2.4-1.1-4 0-1.8.5-3.4 1.5-4.7-.5.1-1 .1-1.5 0-2.3-.3-4.3-1.6-5.9-3.9 1-.7 2.4-1.1 4-1.1 1.9.1 3.5.7 4.8 1.7-.1-.5-.2-1-.2-1.5C9.6 7.3 10.4 5.2 12 3z" />
-            </svg>
-            <span className="text-xl font-semibold tracking-tight">Ontario</span>
-          </Link>
+          <a href="/serviceontario/" className="flex items-center">
+            <img
+              src="/serviceontario/assets/ontario-logo--desktop.svg"
+              alt="Ontario"
+              className="h-9 w-auto"
+            />
+          </a>
           <nav className="flex items-center gap-6 text-sm text-white/85">
             <span className="hidden sm:inline">Topics</span>
             <span className="hidden sm:inline">Search</span>
@@ -35,12 +30,16 @@ export function PublicShell({
           </nav>
         </div>
       </header>
-      <div className="border-b bg-primary text-primary-foreground">
+      <div className="bg-[var(--so-green)] text-white">
         <div className="mx-auto flex h-12 w-full max-w-6xl items-center justify-between px-6">
-          <Link to="/serviceontario" className="text-base font-semibold tracking-tight">
-            ServiceOntario
-          </Link>
-          <span className="text-sm text-primary-foreground/80">Log in to continue</span>
+          <a href="/serviceontario/" className="flex items-center">
+            <img
+              src="/serviceontario/assets/serviceontario-logo-2026-06-16.svg"
+              alt="ServiceOntario"
+              className="h-7 w-auto"
+            />
+          </a>
+          <span className="text-sm text-white/85">Sign in or create an account</span>
         </div>
       </div>
 
@@ -51,12 +50,12 @@ export function PublicShell({
               <li key={c.label} className="flex items-center gap-1">
                 {i > 0 ? <ChevronRight className="size-3.5" aria-hidden /> : null}
                 {c.to ? (
-                  <Link
-                    to={c.to}
+                  <a
+                    href={c.to}
                     className="underline-offset-2 hover:text-foreground hover:underline"
                   >
                     {c.label}
-                  </Link>
+                  </a>
                 ) : (
                   <span className="text-foreground">{c.label}</span>
                 )}

@@ -75,7 +75,7 @@ Header block:
 Each check is `pass` or `fail` with a one-line detail on fail.
 
 **Used vehicle package** panel:
-- Applicant name field (prefilled "Fawaz A." in demo data).
+- Applicant name field (prefilled "Marcus B." in demo data).
 - Primary button: "Request owner authorization".
   - Enabled when all checks pass.
   - Disabled with inline reason when any check fails.

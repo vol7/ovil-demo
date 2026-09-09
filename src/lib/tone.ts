@@ -5,6 +5,7 @@ export function toneFor(label: string): Tone {
   switch (label.toLowerCase()) {
     case "clear":
     case "authorized":
+    case "issued":
     case "closed":
       return "success"
     case "blocked":

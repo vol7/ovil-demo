@@ -1,4 +1,4 @@
-import { Camera, Check, IdCard } from "lucide-react"
+import { Camera, Check } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { useEffect, useState } from "react"
 
@@ -6,7 +6,34 @@ import { Button } from "@/components/ui/button"
 
 type Phase = "idle" | "scanning" | "verified"
 
-/** Mocked "take a photo of your licence" card. Resolves to Verified after a short scan. */
+/** Specimen card, not a real licence. */
+const LICENCE_SRC = "/licence-sample.jpg"
+const SCAN_MS = 1400
+
+function Brackets() {
+  const corners = [
+    "top-1.5 left-1.5 border-t-2 border-l-2",
+    "top-1.5 right-1.5 border-t-2 border-r-2",
+    "bottom-1.5 left-1.5 border-b-2 border-l-2",
+    "bottom-1.5 right-1.5 border-b-2 border-r-2",
+  ]
+  return (
+    <>
+      {corners.map((c) => (
+        <span
+          key={c}
+          className={`absolute size-5 rounded-[3px] border-neutral-400/80 ${c}`}
+          aria-hidden
+        />
+      ))}
+    </>
+  )
+}
+
+/**
+ * Mocked "take a photo of your licence" step. The card rests on a white surface,
+ * a scan line sweeps the whole surface, then the result resolves to Verified.
+ */
 export function PhotoCapture({ onVerified }: { onVerified: () => void }) {
   const reduceMotion = useReducedMotion()
   const [phase, setPhase] = useState<Phase>("idle")
@@ -18,72 +45,90 @@ export function PhotoCapture({ onVerified }: { onVerified: () => void }) {
         setPhase("verified")
         onVerified()
       },
-      reduceMotion ? 50 : 1400
+      reduceMotion ? 50 : SCAN_MS
     )
     return () => window.clearTimeout(id)
   }, [phase, onVerified, reduceMotion])
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-4">
+    <div className="flex flex-col gap-3 rounded-md border bg-muted/40 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium">Photo of your driver's licence</span>
+          <span className="text-sm font-medium">Photo of your driver&apos;s licence</span>
           <span className="text-sm text-muted-foreground">
             We match the photo against the licence number you entered. It is not stored.
           </span>
         </div>
         {phase === "verified" ? (
-          <span className="flex items-center gap-1 text-sm font-medium text-emerald-700">
-            <Check className="size-4" aria-hidden /> Verified
-          </span>
+          <motion.span
+            className="flex shrink-0 items-center gap-1 text-sm font-medium text-emerald-700"
+            initial={reduceMotion ? false : { opacity: 0, x: 4 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            <Check className="size-4" strokeWidth={2.5} aria-hidden />
+            Verified
+          </motion.span>
         ) : null}
       </div>
 
+      {/* White surface the card rests on. 12px of it plus the card's 2px radius makes 14px. */}
       <div
-        className="relative flex aspect-[1.586] w-full max-w-xs items-center justify-center overflow-hidden rounded-md border-2 border-dashed bg-background"
+        className="relative w-full max-w-sm overflow-hidden rounded-[14px] bg-white p-3 outline-1 outline-black/10"
         aria-live="polite"
       >
-        <IdCard className="size-12 text-muted-foreground/50" strokeWidth={1.25} aria-hidden />
+        <img
+          src={LICENCE_SRC}
+          alt="Sample Ontario driver's licence"
+          className={`block w-full ${
+            phase === "idle" ? "opacity-90 brightness-95" : "opacity-100"
+          }`}
+        />
+
+        {phase === "idle" ? <Brackets /> : null}
+
         {phase === "scanning" ? (
-          <motion.div
-            className="absolute inset-x-0 h-0.5 bg-primary shadow-[0_0_12px_2px_var(--color-primary)]"
-            initial={{ top: "4%" }}
-            animate={{ top: ["4%", "94%", "4%"] }}
-            transition={{ duration: 1.4, ease: "easeInOut" }}
-            aria-hidden
-          />
-        ) : null}
-        {phase === "verified" ? (
-          <motion.div
-            className="absolute inset-0 flex items-center justify-center bg-emerald-50/90"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <motion.span
-              className="flex size-12 items-center justify-center rounded-full bg-emerald-600 text-white"
-              initial={reduceMotion ? false : { scale: 0.25, filter: "blur(4px)" }}
-              animate={{ scale: 1, filter: "blur(0px)" }}
-              transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-            >
-              <Check className="size-6" strokeWidth={3} aria-hidden />
-            </motion.span>
-          </motion.div>
+          <>
+            <motion.div
+              className="absolute inset-x-0 h-16 bg-gradient-to-b from-transparent via-primary/25 to-transparent"
+              initial={{ top: "-4rem" }}
+              animate={{ top: ["-4rem", "100%", "-4rem"] }}
+              transition={{ duration: SCAN_MS / 1000, ease: "easeInOut" }}
+              aria-hidden
+            />
+            <motion.div
+              className="absolute inset-x-0 h-0.5 bg-primary shadow-[0_0_14px_3px_var(--color-primary)]"
+              initial={{ top: "0%" }}
+              animate={{ top: ["0%", "100%", "0%"] }}
+              transition={{ duration: SCAN_MS / 1000, ease: "easeInOut" }}
+              aria-hidden
+            />
+          </>
         ) : null}
       </div>
 
       {phase === "idle" ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="w-fit"
-          onClick={() => setPhase("scanning")}
-        >
-          <Camera data-icon="inline-start" aria-hidden />
-          Take photo
-        </Button>
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-muted-foreground">
+            Place the front of your licence on a flat surface, inside the frame.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit"
+            onClick={() => setPhase("scanning")}
+          >
+            <Camera data-icon="inline-start" aria-hidden />
+            Take photo
+          </Button>
+        </div>
       ) : phase === "scanning" ? (
-        <span className="text-sm text-muted-foreground">Checking your licence…</span>
-      ) : null}
+        <span className="text-sm text-muted-foreground">Checking your licence&hellip;</span>
+      ) : (
+        <span className="text-sm text-muted-foreground">
+          Licence verified against the registered owner of this vehicle.
+        </span>
+      )}
     </div>
   )
 }

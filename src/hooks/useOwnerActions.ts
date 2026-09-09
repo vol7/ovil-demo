@@ -1,17 +1,26 @@
 import { generateAuthorizationCode } from "@/lib/authorization"
-import { useSession } from "@/lib/session"
+import { activeAuthorization, useSession } from "@/lib/session"
 
-/** Owner-side actions, dispatched to the shared session. Used by the hidden panel and the hub. */
+/** Owner-side actions against the active request. Used by the hidden panel and the hub. */
 export function useOwnerActions() {
   const [session, dispatch] = useSession()
+  const active = activeAuthorization(session)
+  const vin = active?.vin
   const now = () => new Date().toISOString()
   return {
     session,
-    pending: session.authorization.status === "pending",
+    active,
+    pending: active?.state.status === "pending",
     approve: () =>
-      dispatch({ type: "approve", authorizationCode: generateAuthorizationCode(), at: now() }),
-    deny: () => dispatch({ type: "deny", at: now() }),
-    timeout: () => dispatch({ type: "timeout", at: now() }),
+      vin &&
+      dispatch({
+        type: "approve",
+        vin,
+        authorizationCode: generateAuthorizationCode(),
+        at: now(),
+      }),
+    deny: () => vin && dispatch({ type: "deny", vin, at: now() }),
+    timeout: () => vin && dispatch({ type: "timeout", vin, at: now() }),
     reset: () => dispatch({ type: "clear" }),
   }
 }

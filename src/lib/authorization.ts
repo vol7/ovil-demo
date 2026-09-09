@@ -9,6 +9,8 @@ export type AuthorizationState =
       origin: Origin
       requester: string
       otp: string
+      /** Alphanumeric token in the SMS link. */
+      link: string
       sentAt: string
       expiresAt: string
     }
@@ -17,10 +19,13 @@ export type AuthorizationState =
       origin: Origin
       requester: string
       otp: string
+      link: string
       sentAt: string
       authorizationCode: string
       approvedAt: string
       validUntil: string
+      /** Set once the clerk hands over the package. */
+      issued?: { at: string; packageNumber: string }
     }
   | {
       status: "frozen"
@@ -28,16 +33,18 @@ export type AuthorizationState =
       requester: string
       reason: "denied" | "timeout"
       otp: string
+      link: string
       sentAt: string
       frozenAt: string
     }
   | { status: "escalated"; caseReference: string; escalatedAt: string }
 
 export type AuthorizationAction =
-  | { type: "request"; otp: string; requester: string; at: string }
+  | { type: "request"; otp: string; link: string; requester: string; at: string }
   | { type: "approve"; authorizationCode: string; at: string }
   | { type: "deny"; at: string }
   | { type: "timeout"; at: string }
+  | { type: "issue"; packageNumber: string; at: string }
   | { type: "escalate"; caseReference: string; at: string }
   | { type: "reset"; canRequest: boolean }
 
@@ -64,6 +71,7 @@ export function preapprovedState(input: {
     requester: input.owner,
     otp: "",
     sentAt: input.at,
+    link: "",
     authorizationCode: input.authorizationCode,
     approvedAt: input.at,
     validUntil: plus(input.at, PREAPPROVAL_VALIDITY_MS),
@@ -74,6 +82,7 @@ export function preapprovedState(input: {
 export function buyerPendingState(input: {
   buyer: string
   otp: string
+  link: string
   at: string
 }): AuthorizationState {
   return {
@@ -81,6 +90,7 @@ export function buyerPendingState(input: {
     origin: "buyer",
     requester: input.buyer,
     otp: input.otp,
+    link: input.link,
     sentAt: input.at,
     expiresAt: plus(input.at, AUTHORIZATION_WINDOW_MS),
   }
@@ -98,6 +108,7 @@ export function authorizationReducer(
         origin: "clerk",
         requester: action.requester,
         otp: action.otp,
+        link: action.link,
         sentAt: action.at,
         expiresAt: plus(action.at, AUTHORIZATION_WINDOW_MS),
       }
@@ -109,6 +120,7 @@ export function authorizationReducer(
         origin: state.origin,
         requester: state.requester,
         otp: state.otp,
+        link: state.link,
         sentAt: state.sentAt,
         authorizationCode: action.authorizationCode,
         approvedAt: action.at,
@@ -123,6 +135,7 @@ export function authorizationReducer(
         requester: state.requester,
         reason: "denied",
         otp: state.otp,
+        link: state.link,
         sentAt: state.sentAt,
         frozenAt: action.at,
       }
@@ -135,9 +148,14 @@ export function authorizationReducer(
         requester: state.requester,
         reason: "timeout",
         otp: state.otp,
+        link: state.link,
         sentAt: state.sentAt,
         frozenAt: action.at,
       }
+    }
+    case "issue": {
+      if (state.status !== "authorized" || state.issued) return state
+      return { ...state, issued: { at: action.at, packageNumber: action.packageNumber } }
     }
     case "escalate": {
       if (state.status !== "blocked") return state
@@ -171,15 +189,22 @@ export function generateAuthorizationCode(random: () => number = Math.random): s
   return `OV-${pick(CODE_ALPHABET, 4, random)}-${pick(CODE_ALPHABET, 4, random)}`
 }
 
-/** Short token shown in the SMS link, e.g. ovil.on.ca/c/8K2M. */
+/** Token in the SMS link. Sixteen alphanumerics, so it reads as a real one-time URL. */
 export function generateLinkToken(random: () => number = Math.random): string {
-  return pick(CODE_ALPHABET, 4, random)
+  return pick("abcdefghjkmnpqrstuvwxyz23456789", 16, random)
+}
+
+/** Document number printed on the issued package, e.g. UVIP-2026-09-09-4821. */
+export function generatePackageNumber(date: Date, random: () => number = Math.random): string {
+  return `UVIP-${stamp(date)}-${String(Math.floor(random() * 10000)).padStart(4, "0")}`
 }
 
 export function generateCaseReference(date: Date, random: () => number = Math.random): string {
-  const yyyy = date.getFullYear()
+  return `OVIL-${stamp(date)}-${String(Math.floor(random() * 10000)).padStart(4, "0")}`
+}
+
+function stamp(date: Date): string {
   const mm = String(date.getMonth() + 1).padStart(2, "0")
   const dd = String(date.getDate()).padStart(2, "0")
-  const seq = String(Math.floor(random() * 10000)).padStart(4, "0")
-  return `OVIL-${yyyy}-${mm}-${dd}-${seq}`
+  return `${date.getFullYear()}-${mm}-${dd}`
 }

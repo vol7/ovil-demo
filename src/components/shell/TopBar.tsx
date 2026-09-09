@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { isValidVin, normalizeVin } from "@/lib/format"
 import { OFFICE } from "@/lib/office"
+import { submitOnEnter } from "@/lib/submitOnEnter"
 import { findVehicle } from "@/lib/vehicles"
+import { paths } from "@/lib/paths"
 
 export type Crumb = { label: string; to?: string }
 
@@ -16,15 +18,14 @@ export function TopBar({ crumbs }: { crumbs: Crumb[] }) {
   const [vin, setVin] = useState("")
   const [invalid, setInvalid] = useState(false)
 
-  function submit(event: React.FormEvent) {
-    event.preventDefault()
+  function submit() {
     const normalized = normalizeVin(vin)
     if (!isValidVin(normalized) || !findVehicle(normalized)) {
       setInvalid(true)
       return
     }
     setVin("")
-    navigate(`/vehicle/${normalized}`)
+    navigate(paths.portal.vehicle(normalized))
   }
 
   return (
@@ -58,7 +59,7 @@ export function TopBar({ crumbs }: { crumbs: Crumb[] }) {
       </nav>
 
       <div className="flex items-center gap-3">
-        <form onSubmit={submit} className="relative hidden md:block" role="search">
+        <div className="relative hidden md:block" role="search">
           <Search
             className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -66,18 +67,22 @@ export function TopBar({ crumbs }: { crumbs: Crumb[] }) {
           <Input
             aria-label="Search by VIN"
             placeholder="Search by VIN"
-            className="h-8 w-64 pl-8 font-mono text-xs tracking-wider uppercase shadow-none placeholder:font-sans placeholder:text-sm placeholder:tracking-normal placeholder:normal-case"
+            className="w-64 pl-8 font-mono tracking-wider uppercase placeholder:font-sans placeholder:tracking-normal placeholder:normal-case"
             value={vin}
             maxLength={17}
             autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
             spellCheck={false}
             aria-invalid={invalid || undefined}
+            onKeyDown={submitOnEnter(submit)}
             onChange={(e) => {
               setVin(e.target.value.toUpperCase())
               setInvalid(false)
             }}
           />
-        </form>
+        </div>
         <Badge variant="outline" className="hidden gap-1.5 lg:inline-flex">
           <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
           Ontario · Production

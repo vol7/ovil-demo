@@ -14,8 +14,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { allPass, evaluateChecks } from "@/lib/checks"
-import { useSession } from "@/lib/session"
+import { activeAuthorization, useSession } from "@/lib/session"
+import { FORCE_STATES, forcedSession } from "@/lib/forceStates"
 import { DEMO_VEHICLES, findVehicle, vehicleTitle } from "@/lib/vehicles"
+import { paths } from "@/lib/paths"
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
@@ -53,8 +55,10 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export function Hub() {
-  const [session] = useSession()
-  const vehicle = session.vin ? findVehicle(session.vin) : undefined
+  const [session, dispatch] = useSession()
+  const active = activeAuthorization(session)
+  const vehicle = active ? findVehicle(active.vin) : undefined
+  const auth = active?.state
 
   return (
     <main className="min-h-svh bg-muted/40 px-6 py-12">
@@ -66,7 +70,7 @@ export function Hub() {
           <h1 className="text-2xl font-semibold tracking-tight">OVIL demo</h1>
           <p className="text-sm text-muted-foreground">
             Open each surface in its own window. All windows share one session, so a request from
-            ServiceOntario or the counter shows up on the phone, and the owner\u2019s answer shows
+            ServiceOntario or the counter shows up on the phone, and the owner&rsquo;s answer shows
             up in the portal.
           </p>
         </div>
@@ -81,11 +85,11 @@ export function Hub() {
               <CardDescription>Owner or buyer pre-approval. Record at 1440×900.</CardDescription>
             </CardHeader>
             <CardContent className="flex-row flex-wrap gap-2">
-              <Button onClick={() => open("/serviceontario", 1440, 900)}>
+              <Button onClick={() => open(paths.serviceOntario, 1440, 900)}>
                 <ExternalLink data-icon="inline-start" aria-hidden />
                 Open window
               </Button>
-              <a href="/serviceontario" className={buttonVariants({ variant: "outline" })}>
+              <a href={paths.serviceOntario} className={buttonVariants({ variant: "outline" })}>
                 Open here
               </a>
             </CardContent>
@@ -99,11 +103,11 @@ export function Hub() {
               <CardDescription>Starts at sign-in. Record at 1440×900.</CardDescription>
             </CardHeader>
             <CardContent className="flex-row flex-wrap gap-2">
-              <Button onClick={() => open("/", 1440, 900)}>
+              <Button onClick={() => open(paths.portal.signIn, 1440, 900)}>
                 <ExternalLink data-icon="inline-start" aria-hidden />
                 Open window
               </Button>
-              <a href="/" className={buttonVariants({ variant: "outline" })}>
+              <a href={paths.portal.signIn} className={buttonVariants({ variant: "outline" })}>
                 Open here
               </a>
             </CardContent>
@@ -119,11 +123,11 @@ export function Hub() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-row flex-wrap gap-2">
-              <Button onClick={() => open("/phone", 390, 844)}>
+              <Button onClick={() => open(paths.phone, 390, 844)}>
                 <ExternalLink data-icon="inline-start" aria-hidden />
                 Open window
               </Button>
-              <a href="/phone" className={buttonVariants({ variant: "outline" })}>
+              <a href={paths.phone} className={buttonVariants({ variant: "outline" })}>
                 Open here
               </a>
             </CardContent>
@@ -134,7 +138,7 @@ export function Hub() {
           <CardHeader className="border-b py-4">
             <CardTitle>Scenarios</CardTitle>
             <CardDescription>
-              Both VINs are listed under recent lookups in the portal.
+              Both VINs are listed under recent lookups in the clerk portal.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-0 pb-1">
@@ -193,22 +197,41 @@ export function Hub() {
                   <span className="font-mono tracking-wider">{vehicle.plate}</span>
                 </>
               ) : (
-                "No vehicle open in the portal."
+                "No request in flight."
               )}
             </CardDescription>
           </CardHeader>
           <CardContent className="gap-4">
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Authorization</span>
-              <OutcomeBadge label={STATUS_LABEL[session.authorization.status]} />
-              {"origin" in session.authorization ? (
+              <OutcomeBadge label={STATUS_LABEL[auth?.status ?? "idle"]} />
+              {auth && "origin" in auth ? (
                 <span className="text-muted-foreground">
-                  · started by {session.authorization.origin} ({session.authorization.requester})
+                  · started by {auth.origin} ({auth.requester})
                 </span>
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <OwnerActionButtons size="default" />
+            </div>
+            <div className="flex flex-col gap-2 border-t pt-4">
+              <span className="text-sm font-medium">Force state</span>
+              <p className="text-sm text-muted-foreground">
+                Jump straight to any state, whatever the session is doing now. Useful for
+                re-shooting one beat without replaying the whole flow.
+              </p>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {FORCE_STATES.map(({ key, label }) => (
+                  <Button
+                    key={key}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => dispatch({ type: "force", session: forcedSession(key) })}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>

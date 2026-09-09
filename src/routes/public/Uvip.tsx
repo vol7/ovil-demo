@@ -4,8 +4,8 @@ import { Link } from "react-router"
 import { PublicShell } from "@/components/public/PublicShell"
 
 const CRUMBS = [
-  { label: "ServiceOntario", to: "/serviceontario" },
-  { label: "Vehicles", to: "/serviceontario" },
+  { label: "ServiceOntario", to: "/serviceontario/" },
+  { label: "Vehicles", to: "/serviceontario/" },
   { label: "Used Vehicle Information Package" },
 ]
 

@@ -7,7 +7,8 @@ import { getSessionStore } from "@/lib/session"
 import { CLEAN_VIN } from "@/lib/vehicles"
 import { ConfirmPage } from "./ConfirmPage"
 
-const T0 = "2026-09-04T18:14:00.000Z"
+const T0 = "2026-09-09T18:14:00.000Z"
+const LINK = "k7m2p9xq4tvn8bwz"
 
 function renderConfirm() {
   const router = createMemoryRouter(
@@ -27,35 +28,50 @@ describe("ConfirmPage", () => {
     expect(screen.getByText(/no longer active/i)).toBeInTheDocument()
   })
 
-  it("shows the request summary and approves through the shared session", async () => {
+  it("shows the requester by name only, then approves the active vehicle", async () => {
     const store = getSessionStore()
-    store.dispatch({ type: "open", vin: CLEAN_VIN, canRequest: true })
-    store.dispatch({ type: "request", otp: "482 193", requester: "Fawaz A.", at: T0 })
+    store.dispatch({
+      type: "request",
+      vin: CLEAN_VIN,
+      canRequest: true,
+      otp: "482 193",
+      link: LINK,
+      requester: "Marcus Beaulieu",
+      at: T0,
+    })
     renderConfirm()
     expect(screen.getByText("2023 Mercedes-AMG GLE 63 S 4MATIC+")).toBeInTheDocument()
-    expect(screen.getByText(/Fawaz A\. · in person at MTO Toronto Downtown/)).toBeInTheDocument()
+    expect(screen.getByText("Marcus Beaulieu")).toBeInTheDocument()
+    expect(screen.queryByText(/in person|online via/i)).not.toBeInTheDocument()
+    expect(screen.getByText(`ovil.on.ca/c/${LINK}`)).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Approve" }))
-    expect(store.getState().authorization.status).toBe("authorized")
+    expect(store.getState().authorizations[CLEAN_VIN].status).toBe("authorized")
     expect(await screen.findByText("Authorization recorded")).toBeInTheDocument()
-    expect(screen.getByText(/^OV-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/)).toBeInTheDocument()
   })
 
-  it("names the buyer and declines", async () => {
+  it("declines, and offers no in-page way back to Messages", async () => {
     const store = getSessionStore()
-    store.dispatch({ type: "buyerRequest", vin: CLEAN_VIN, buyer: "Fawaz Ahmed", otp: "1", at: T0 })
+    store.dispatch({
+      type: "buyerRequest",
+      vin: CLEAN_VIN,
+      buyer: "Marcus Beaulieu",
+      otp: "1",
+      link: LINK,
+      at: T0,
+    })
     renderConfirm()
-    expect(screen.getByText(/Fawaz Ahmed · online via ServiceOntario/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Decline" }))
-    expect(store.getState().authorization).toMatchObject({ status: "frozen", reason: "denied" })
+    expect(store.getState().authorizations[CLEAN_VIN]).toMatchObject({
+      status: "frozen",
+      reason: "denied",
+    })
     expect(await screen.findByText("Request declined")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /back to messages/i })).not.toBeInTheDocument()
   })
 
-  it("navigates back to the thread", async () => {
-    const store = getSessionStore()
-    store.dispatch({ type: "buyerRequest", vin: CLEAN_VIN, buyer: "Fawaz Ahmed", otp: "1", at: T0 })
-    store.dispatch({ type: "approve", authorizationCode: "OV-AAAA-BBBB", at: T0 })
+  it("the browser back chevron still returns to the thread", async () => {
     const router = renderConfirm()
-    await userEvent.click(screen.getByRole("button", { name: /back to messages/i }))
+    await userEvent.click(screen.getByRole("button", { name: "Back" }))
     expect(router.state.location.pathname).toBe("/phone")
   })
 })

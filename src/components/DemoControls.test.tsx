@@ -8,11 +8,13 @@ import { DemoControls } from "./DemoControls"
 
 function openPending() {
   const store = getSessionStore()
-  store.dispatch({ type: "open", vin: CLEAN_VIN, canRequest: true })
   store.dispatch({
     type: "request",
+    vin: CLEAN_VIN,
+    canRequest: true,
     otp: "482 193",
-    requester: "Fawaz A.",
+    link: "k7m2p9xq4tvn8bwz",
+    requester: "Marcus B.",
     at: new Date().toISOString(),
   })
   return store
@@ -36,25 +38,28 @@ describe("DemoControls", () => {
     expect(screen.queryByRole("region", { name: /demo controls/i })).not.toBeInTheDocument()
   })
 
-  it("approves the pending request through the shared session", async () => {
+  it("approves the active request through the shared session", async () => {
     const store = openPending()
     render(<DemoControls />)
     await userEvent.keyboard("{Shift>}D{/Shift}")
     await userEvent.click(screen.getByRole("button", { name: /owner approves/i }))
-    expect(store.getState().authorization.status).toBe("authorized")
+    expect(store.getState().authorizations[CLEAN_VIN].status).toBe("authorized")
   })
 
-  it("denies, times out, and resets", async () => {
+  it("denies, then resets everything", async () => {
     const store = openPending()
     render(<DemoControls />)
     await userEvent.keyboard("{Shift>}D{/Shift}")
     await userEvent.click(screen.getByRole("button", { name: /owner denies/i }))
-    expect(store.getState().authorization).toMatchObject({ status: "frozen", reason: "denied" })
+    expect(store.getState().authorizations[CLEAN_VIN]).toMatchObject({
+      status: "frozen",
+      reason: "denied",
+    })
     await userEvent.click(screen.getByRole("button", { name: /reset session/i }))
-    expect(store.getState()).toEqual({ vin: null, authorization: { status: "idle" } })
+    expect(store.getState()).toEqual({ authorizations: {}, activeVin: null })
   })
 
-  it("disables owner actions when not pending", async () => {
+  it("disables owner actions when nothing is pending", async () => {
     render(<DemoControls />)
     await userEvent.keyboard("{Shift>}D{/Shift}")
     expect(screen.getByRole("button", { name: /owner approves/i })).toBeDisabled()

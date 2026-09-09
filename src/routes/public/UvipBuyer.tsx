@@ -1,7 +1,6 @@
 import { MessageSquareText } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { useState } from "react"
-import { Link } from "react-router"
 
 import { PublicShell } from "@/components/public/PublicShell"
 import { StepHeader, StepPanel } from "@/components/public/Stepper"
@@ -9,8 +8,8 @@ import { VinStep } from "@/components/public/VinStep"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { generateOtp } from "@/lib/authorization"
-import { BUYER, maskLicence } from "@/lib/people"
+import { generateLinkToken, generateOtp } from "@/lib/authorization"
+import { BUYER } from "@/lib/people"
 import { useSession } from "@/lib/session"
 import { maskName } from "@/lib/format"
 import { vehicleTitle, type Vehicle } from "@/lib/vehicles"
@@ -18,7 +17,7 @@ import { ReviewRow } from "./UvipOwner"
 
 const STEPS = ["Vehicle", "Your details", "Review"]
 const CRUMBS = [
-  { label: "ServiceOntario", to: "/serviceontario" },
+  { label: "ServiceOntario", to: "/serviceontario/" },
   { label: "Used Vehicle Information Package", to: "/uvip" },
   { label: "Buyer" },
 ]
@@ -40,6 +39,7 @@ export function UvipBuyer() {
       vin: vehicle.vin,
       buyer: name,
       otp: generateOtp(),
+      link: generateLinkToken(),
       at: new Date().toISOString(),
     })
     setSent(true)
@@ -80,8 +80,8 @@ export function UvipBuyer() {
             <dl className="divide-y">
               <ReviewRow label="Vehicle" value={vehicleTitle(vehicle)} />
               <ReviewRow
-                label="Plate"
-                value={<span className="font-mono tracking-wider">{vehicle.plate}</span>}
+                label="VIN"
+                value={<span className="font-mono tracking-wider">{vehicle.vin}</span>}
               />
               <ReviewRow label="Registered owner" value={maskName(vehicle.owner.name)} />
               <ReviewRow label="Texted to" value={`Phone ending in ${vehicle.owner.phoneLast4}`} />
@@ -91,9 +91,9 @@ export function UvipBuyer() {
               We will text you at {mobile} as soon as the owner responds. If they approve, bring
               your driver's licence to a ServiceOntario centre and the clerk will issue the package.
             </p>
-            <Link to="/serviceontario" className={buttonVariants({ variant: "outline" })}>
+            <a href="/serviceontario/" className={buttonVariants({ variant: "outline" })}>
               Back to ServiceOntario
-            </Link>
+            </a>
           </motion.section>
         ) : (
           <>
@@ -126,43 +126,53 @@ export function UvipBuyer() {
                     <Label htmlFor="buyer-name">Full legal name</Label>
                     <Input
                       id="buyer-name"
+                      autoComplete="off"
+                      spellCheck={false}
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="h-11 md:text-base"
+                      size="lg"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="buyer-licence">Ontario driver's licence number</Label>
                     <Input
                       id="buyer-licence"
+                      autoComplete="off"
+                      spellCheck={false}
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
                       value={licence}
                       onChange={(e) => setLicence(e.target.value)}
-                      className="h-11 font-mono tracking-wider md:text-base"
+                      size="lg"
+                      className="font-mono tracking-wider"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="buyer-mobile">Mobile number</Label>
                     <Input
                       id="buyer-mobile"
+                      autoComplete="off"
+                      spellCheck={false}
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
                       value={mobile}
                       onChange={(e) => setMobile(e.target.value)}
-                      className="h-11 md:text-base"
+                      size="lg"
                     />
                     <p className="text-sm text-muted-foreground">
                       We will text you when the owner responds.
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="h-11"
-                      onClick={() => setStep(0)}
-                    >
+                    <Button type="button" variant="outline" size="lg" onClick={() => setStep(0)}>
                       Back
                     </Button>
-                    <Button type="submit" size="lg" className="h-11 px-5">
+                    <Button type="submit" size="lg">
                       Continue
                     </Button>
                   </div>
@@ -181,29 +191,22 @@ export function UvipBuyer() {
                   <dl className="divide-y rounded-xl border bg-card px-5">
                     <ReviewRow label="Vehicle" value={vehicleTitle(vehicle)} />
                     <ReviewRow
-                      label="Plate"
-                      value={<span className="font-mono tracking-wider">{vehicle.plate}</span>}
+                      label="VIN"
+                      value={<span className="font-mono tracking-wider">{vehicle.vin}</span>}
                     />
                     <ReviewRow label="Registered owner" value={maskName(vehicle.owner.name)} />
                     <ReviewRow label="Your name" value={name} />
                     <ReviewRow
                       label="Driver's licence"
-                      value={
-                        <span className="font-mono tracking-wider">{maskLicence(licence)}</span>
-                      }
+                      value={<span className="font-mono tracking-wider">{licence}</span>}
                     />
+                    <ReviewRow label="Mobile" value={mobile} />
                   </dl>
                   <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="h-11"
-                      onClick={() => setStep(1)}
-                    >
+                    <Button type="button" variant="outline" size="lg" onClick={() => setStep(1)}>
                       Back
                     </Button>
-                    <Button type="button" size="lg" className="h-11 px-5" onClick={submit}>
+                    <Button type="button" size="lg" onClick={submit}>
                       Send request to owner
                     </Button>
                   </div>

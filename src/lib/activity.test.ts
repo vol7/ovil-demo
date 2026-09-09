@@ -22,8 +22,9 @@ describe("deriveActivity", () => {
       {
         status: "authorized",
         origin: "clerk",
-        requester: "Fawaz A.",
+        requester: "Marcus B.",
         otp: "1",
+        link: "",
         sentAt: T1,
         authorizationCode: "OV-AAAA-BBBB",
         approvedAt: T2,
@@ -41,9 +42,10 @@ describe("deriveActivity", () => {
       {
         status: "frozen",
         origin: "clerk",
-        requester: "Fawaz A.",
+        requester: "Marcus B.",
         reason: "denied",
         otp: "1",
+        link: "",
         sentAt: T1,
         frozenAt: T2,
       },
@@ -60,6 +62,7 @@ describe("deriveActivity", () => {
         origin: "owner",
         requester: "Daniel Okafor",
         otp: "",
+        link: "",
         sentAt: T0,
         authorizationCode: "OV-AAAA-BBBB",
         approvedAt: T0,
@@ -76,8 +79,9 @@ describe("deriveActivity", () => {
       {
         status: "pending",
         origin: "buyer",
-        requester: "Fawaz Ahmed",
+        requester: "Marcus Beaulieu",
         otp: "1",
+        link: "",
         sentAt: T0,
         expiresAt: T2,
       },
@@ -85,7 +89,7 @@ describe("deriveActivity", () => {
       "M. Chen"
     )
     expect(events[0]).toMatchObject({ id: "sent", title: "Pre-approval requested online" })
-    expect(events[0].detail).toContain("Fawaz Ahmed")
+    expect(events[0].detail).toContain("Marcus Beaulieu")
   })
 
   it("lists blocked then escalated for a cloned vehicle", () => {
@@ -95,5 +99,26 @@ describe("deriveActivity", () => {
       "M. Chen"
     )
     expect(events.map((e) => e.id)).toEqual(["lookup", "blocked", "escalated"])
+  })
+
+  it("adds a package issued event once the clerk hands it over", () => {
+    const events = deriveActivity(
+      {
+        status: "authorized",
+        origin: "clerk",
+        requester: "Marcus B.",
+        otp: "1",
+        link: "",
+        sentAt: T1,
+        authorizationCode: "OV-AAAA-BBBB",
+        approvedAt: T2,
+        validUntil: T2,
+        issued: { at: T2, packageNumber: "UVIP-2026-09-09-4821" },
+      },
+      T0,
+      "M. Chen"
+    )
+    expect(events.map((e) => e.id)).toContain("issued")
+    expect(events.at(-1)).toMatchObject({ title: "Package issued", tone: "success" })
   })
 })

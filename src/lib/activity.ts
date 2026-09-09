@@ -32,7 +32,7 @@ export function deriveActivity(
         events.push({
           id: "blocked",
           at: openedAt,
-          title: "Transaction blocked",
+          title: "Package not issued",
           detail: "Record checks returned conflicts",
           tone: "danger",
         })
@@ -43,7 +43,7 @@ export function deriveActivity(
         events.push({
           id: "blocked",
           at: openedAt,
-          title: "Transaction blocked",
+          title: "Package not issued",
           detail: "Record checks returned conflicts",
           tone: "danger",
         })
@@ -87,6 +87,15 @@ export function deriveActivity(
         tone: "warning",
       })
       break
+  }
+  if (state.status === "authorized" && state.issued) {
+    events.push({
+      id: "issued",
+      at: state.issued.at,
+      title: "Package issued",
+      detail: state.issued.packageNumber,
+      tone: "success",
+    })
   }
   return events.sort((a, b) => a.at.localeCompare(b.at))
 }

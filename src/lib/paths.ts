@@ -1,0 +1,29 @@
+/**
+ * Every route in one place. The hub owns `/`; each surface lives under its own prefix.
+ */
+export const PORTAL_PREFIX = "/portal"
+
+export const paths = {
+  hub: "/",
+  /** Legacy alias for the hub; redirects to `/`. */
+  demo: "/demo",
+
+  portal: {
+    signIn: PORTAL_PREFIX,
+    home: `${PORTAL_PREFIX}/home`,
+    lookup: `${PORTAL_PREFIX}/lookup`,
+    vehicle: (vin: string) => `${PORTAL_PREFIX}/vehicle/${vin}`,
+    vehiclePattern: `${PORTAL_PREFIX}/vehicle/:vin`,
+    requests: `${PORTAL_PREFIX}/requests`,
+    cases: `${PORTAL_PREFIX}/cases`,
+  },
+
+  phone: "/phone",
+  phoneConfirm: "/phone/confirm",
+
+  /** Served statically from public/; needs the trailing slash. */
+  serviceOntario: "/serviceontario/",
+  uvip: "/uvip",
+  uvipOwner: "/uvip/owner",
+  uvipBuyer: "/uvip/buyer",
+} as const

@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { OUTCOME_LABEL, recentRows } from "@/lib/seed"
+import { paths } from "@/lib/paths"
 
 export function RecentLookupsTable({
   limit,
@@ -38,7 +39,7 @@ export function RecentLookupsTable({
           <TableRow
             key={row.vin}
             className={row.live ? "cursor-pointer" : "cursor-default text-muted-foreground"}
-            onClick={row.live ? () => navigate(`/vehicle/${row.vin}`) : undefined}
+            onClick={row.live ? () => navigate(paths.portal.vehicle(row.vin)) : undefined}
           >
             <TableCell className="pl-6 font-mono tracking-wider">{row.plate}</TableCell>
             <TableCell className={row.live ? "font-medium" : undefined}>{row.vehicle}</TableCell>
@@ -48,7 +49,7 @@ export function RecentLookupsTable({
                   <button
                     type="button"
                     className="rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                    onClick={() => navigate(`/vehicle/${row.vin}`)}
+                    onClick={() => navigate(paths.portal.vehicle(row.vin))}
                   >
                     {row.vin}
                   </button>

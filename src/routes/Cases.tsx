@@ -16,27 +16,28 @@ import { findVehicle, vehicleTitle } from "@/lib/vehicles"
 
 export function Cases() {
   const [session] = useSession()
-  const auth = session.authorization
-  const vehicle = session.vin ? findVehicle(session.vin) : undefined
-  const live: CaseRow | null =
-    auth.status === "escalated" && vehicle
-      ? {
-          reference: auth.caseReference,
-          vehicle: vehicleTitle(vehicle),
-          plate: vehicle.plate,
-          reason: "Duplicate identity · insurer write-off",
-          routedTo: "Insurance Hub · OPP Auto Theft Unit",
-          status: "Open",
-          when: `Today, ${formatTime(auth.escalatedAt)}`,
-        }
-      : null
-  const rows = live ? [live, ...CASE_ROWS] : CASE_ROWS
+  const live: CaseRow[] = Object.entries(session.authorizations).flatMap(([vin, auth]) => {
+    const vehicle = findVehicle(vin)
+    if (auth.status !== "escalated" || !vehicle) return []
+    return [
+      {
+        reference: auth.caseReference,
+        vehicle: vehicleTitle(vehicle),
+        plate: vehicle.plate,
+        reason: "Duplicate identity · insurer write-off",
+        routedTo: "OPP Auto Theft Unit",
+        status: "Open" as const,
+        when: `Today, ${formatTime(auth.escalatedAt)}`,
+      },
+    ]
+  })
+  const rows = [...live, ...CASE_ROWS]
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Cases"
-        description="Transactions escalated to law enforcement or the Insurance Hub from this office."
+        description="Transactions escalated to law enforcement from this office."
       />
       <Card className="gap-0 py-0">
         <CardContent className="px-0">
@@ -56,7 +57,7 @@ export function Cases() {
               {rows.map((row, i) => (
                 <TableRow
                   key={row.reference}
-                  className={i === 0 && live ? "bg-primary/[0.03]" : undefined}
+                  className={i < live.length ? "bg-primary/[0.03]" : undefined}
                 >
                   <TableCell className="pl-6 font-mono text-xs tracking-wider">
                     {row.reference}

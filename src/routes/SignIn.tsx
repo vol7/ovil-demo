@@ -5,6 +5,7 @@ import { useNavigate } from "react-router"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { paths } from "@/lib/paths"
 
 export function SignIn() {
   const navigate = useNavigate()
@@ -23,8 +24,8 @@ export function SignIn() {
           aria-hidden
         />
         <div className="relative flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-md bg-white/15 text-xs font-bold tracking-wide ring-1 ring-white/25">
-            OV
+          <span className="flex size-8 items-center justify-center rounded-md bg-white/15 ring-1 ring-white/25">
+            <ShieldCheck className="size-4" aria-hidden />
           </span>
           <span className="text-sm font-semibold tracking-wide">OVIL</span>
         </div>
@@ -62,31 +63,45 @@ export function SignIn() {
               Sign in with your ministry credentials to look up vehicle records.
             </p>
           </div>
+          {/*
+            Deliberately not a credential form: no type="password" and no username /
+            current-password autocomplete hints, so Chrome never offers to save or fill
+            a login in the middle of a take. The secret is masked with text-security.
+          */}
           <form
             className="flex flex-col gap-5"
+            autoComplete="off"
             onSubmit={(event) => {
               event.preventDefault()
-              navigate("/home")
+              navigate(paths.portal.home)
             }}
           >
             <div className="flex flex-col gap-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="signin-operator">Username</Label>
               <Input
-                id="username"
-                autoComplete="username"
+                id="signin-operator"
+                autoComplete="off"
+                spellCheck={false}
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="signin-secret">Password</Label>
                 <span className="text-xs text-muted-foreground">Forgot password?</span>
               </div>
               <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
+                id="signin-secret"
+                className="[-webkit-text-security:disc]"
+                autoComplete="off"
+                spellCheck={false}
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />

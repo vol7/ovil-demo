@@ -8,7 +8,9 @@ import {
   preapprovedState,
   generateAuthorizationCode,
   generateCaseReference,
+  generateLinkToken,
   generateOtp,
+  generatePackageNumber,
   initialState,
   type AuthorizationState,
 } from "./authorization"
@@ -20,7 +22,8 @@ function pending(): AuthorizationState {
   return authorizationReducer(initialState(true), {
     type: "request",
     otp: "482 193",
-    requester: "Fawaz A.",
+    link: "k7m2p9xq4tvn8bwz",
+    requester: "Marcus B.",
     at: T0,
   })
 }
@@ -40,7 +43,7 @@ describe("authorizationReducer", () => {
     expect(state).toMatchObject({
       status: "pending",
       origin: "clerk",
-      requester: "Fawaz A.",
+      requester: "Marcus B.",
       otp: "482 193",
       sentAt: T0,
     })
@@ -59,7 +62,7 @@ describe("authorizationReducer", () => {
     expect(state).toMatchObject({
       status: "authorized",
       origin: "clerk",
-      requester: "Fawaz A.",
+      requester: "Marcus B.",
       otp: "482 193",
       sentAt: T0,
       authorizationCode: "OV-7K2M-9Q3F",
@@ -75,9 +78,10 @@ describe("authorizationReducer", () => {
     expect(authorizationReducer(pending(), { type: "deny", at: T1 })).toEqual({
       status: "frozen",
       origin: "clerk",
-      requester: "Fawaz A.",
+      requester: "Marcus B.",
       reason: "denied",
       otp: "482 193",
+      link: "k7m2p9xq4tvn8bwz",
       sentAt: T0,
       frozenAt: T1,
     })
@@ -87,9 +91,10 @@ describe("authorizationReducer", () => {
     expect(authorizationReducer(pending(), { type: "timeout", at: T1 })).toEqual({
       status: "frozen",
       origin: "clerk",
-      requester: "Fawaz A.",
+      requester: "Marcus B.",
       reason: "timeout",
       otp: "482 193",
+      link: "k7m2p9xq4tvn8bwz",
       sentAt: T0,
       frozenAt: T1,
     })
@@ -123,7 +128,8 @@ describe("authorizationReducer", () => {
       authorizationReducer(blocked, {
         type: "request",
         otp: "000 000",
-        requester: "Fawaz A.",
+        link: "k7m2p9xq4tvn8bwz",
+        requester: "Marcus B.",
         at: T0,
       })
     ).toBe(blocked)
@@ -176,11 +182,16 @@ describe("pre-approval states", () => {
   })
 
   it("buyerPendingState is pending with buyer origin and keeps the origin through approve", () => {
-    const pendingState = buyerPendingState({ buyer: "Fawaz Ahmed", otp: "111 222", at: T0 })
+    const pendingState = buyerPendingState({
+      buyer: "Marcus Beaulieu",
+      otp: "111 222",
+      link: "k7m2p9xq4tvn8bwz",
+      at: T0,
+    })
     expect(pendingState).toMatchObject({
       status: "pending",
       origin: "buyer",
-      requester: "Fawaz Ahmed",
+      requester: "Marcus Beaulieu",
     })
     const approved = authorizationReducer(pendingState, {
       type: "approve",
@@ -190,9 +201,57 @@ describe("pre-approval states", () => {
     expect(approved).toMatchObject({
       status: "authorized",
       origin: "buyer",
-      requester: "Fawaz Ahmed",
+      requester: "Marcus Beaulieu",
     })
     const denied = authorizationReducer(pendingState, { type: "deny", at: T1 })
     expect(denied).toMatchObject({ status: "frozen", origin: "buyer", reason: "denied" })
+  })
+})
+
+describe("issue", () => {
+  function authorized() {
+    return authorizationReducer(pending(), {
+      type: "approve",
+      authorizationCode: "OV-7K2M-9Q3F",
+      at: T1,
+    })
+  }
+
+  it("records the package number against the authorization", () => {
+    const state = authorizationReducer(authorized(), {
+      type: "issue",
+      packageNumber: "UVIP-2026-09-02-4821",
+      at: T1,
+    })
+    expect(state).toMatchObject({
+      status: "authorized",
+      issued: { at: T1, packageNumber: "UVIP-2026-09-02-4821" },
+    })
+  })
+
+  it("is a no-op before authorization and when already issued", () => {
+    const idle = initialState(true)
+    expect(authorizationReducer(idle, { type: "issue", packageNumber: "X", at: T1 })).toBe(idle)
+    const once = authorizationReducer(authorized(), {
+      type: "issue",
+      packageNumber: "UVIP-1",
+      at: T1,
+    })
+    expect(authorizationReducer(once, { type: "issue", packageNumber: "UVIP-2", at: T1 })).toBe(
+      once
+    )
+  })
+})
+
+describe("generateLinkToken", () => {
+  it("is sixteen lowercase alphanumerics", () => {
+    const token = generateLinkToken()
+    expect(token).toMatch(/^[a-z2-9]{16}$/)
+  })
+})
+
+describe("generatePackageNumber", () => {
+  it("stamps the date and a sequence", () => {
+    expect(generatePackageNumber(new Date(2026, 8, 9), () => 0.4821)).toBe("UVIP-2026-09-09-4821")
   })
 })

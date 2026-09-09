@@ -1,4 +1,4 @@
-import { LogOut } from "lucide-react"
+import { LogOut, ShieldCheck } from "lucide-react"
 import { Link, NavLink, useLocation } from "react-router"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -6,14 +6,15 @@ import { buttonVariants } from "@/components/ui/button"
 import { NAV_ITEMS, isActive } from "@/lib/nav"
 import { OFFICE } from "@/lib/office"
 import { cn } from "@/lib/utils"
+import { paths } from "@/lib/paths"
 
 export function Sidebar() {
   const { pathname } = useLocation()
   return (
     <aside className="flex h-svh w-60 shrink-0 flex-col border-r bg-background">
-      <Link to="/home" className="flex h-14 items-center gap-2.5 border-b px-5">
-        <span className="flex size-7 items-center justify-center rounded-md bg-primary text-[11px] font-bold tracking-wide text-primary-foreground">
-          OV
+      <Link to={paths.portal.home} className="flex h-14 items-center gap-2.5 border-b px-5">
+        <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <ShieldCheck className="size-4" aria-hidden />
         </span>
         <span className="flex flex-col leading-none">
           <span className="text-sm font-semibold tracking-wide">OVIL</span>
@@ -67,7 +68,7 @@ export function Sidebar() {
           </div>
         </div>
         <Link
-          to="/"
+          to={paths.portal.signIn}
           className={cn(
             buttonVariants({ variant: "outline", size: "sm" }),
             "w-full justify-center"

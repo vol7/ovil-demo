@@ -1,20 +1,26 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Link, useParams } from "react-router"
 
 import { ActivityTimeline } from "@/components/ActivityTimeline"
 import { DemoControls } from "@/components/DemoControls"
 import { OdometerHistory, OwnershipCard } from "@/components/OwnershipCard"
-import { PackagePanel } from "@/components/PackagePanel"
+import { PackagePanel, type ApplicantDetails } from "@/components/PackagePanel"
 import { RecordChecks } from "@/components/RecordChecks"
 import { VehicleHeader } from "@/components/VehicleHeader"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { deriveActivity } from "@/lib/activity"
-import { generateCaseReference, generateOtp } from "@/lib/authorization"
+import {
+  generateCaseReference,
+  generateLinkToken,
+  generateOtp,
+  generatePackageNumber,
+} from "@/lib/authorization"
 import { allPass, evaluateChecks } from "@/lib/checks"
 import { OFFICE } from "@/lib/office"
-import { useSession } from "@/lib/session"
+import { useSession, vehicleState } from "@/lib/session"
 import { findVehicle, type Vehicle as VehicleRecord } from "@/lib/vehicles"
+import { paths } from "@/lib/paths"
 
 export function Vehicle() {
   const { vin = "" } = useParams<{ vin: string }>()
@@ -25,7 +31,7 @@ export function Vehicle() {
       <Card className="mx-auto max-w-md">
         <CardContent className="items-start gap-4">
           <p className="text-sm">No record found for this VIN.</p>
-          <Link to="/lookup" className={buttonVariants({ variant: "outline" })}>
+          <Link to={paths.portal.lookup} className={buttonVariants({ variant: "outline" })}>
             Back to lookup
           </Link>
         </CardContent>
@@ -40,26 +46,35 @@ function VehicleView({ vehicle }: { vehicle: VehicleRecord }) {
   const checks = useMemo(() => evaluateChecks(vehicle), [vehicle])
   const canRequest = allPass(checks)
   const [session, dispatch] = useSession()
+  // Presentational only: when this page was opened, for the timeline caption.
   const [openedAt] = useState(() => new Date().toISOString())
   const [settled, setSettled] = useState(false)
 
-  useEffect(() => {
-    dispatch({ type: "open", vin: vehicle.vin, canRequest })
-  }, [dispatch, vehicle.vin, canRequest])
-
-  // Until the store reflects this vehicle, show the initial state for it.
-  const state =
-    session.vin === vehicle.vin
-      ? session.authorization
-      : canRequest
-        ? ({ status: "idle" } as const)
-        : ({ status: "blocked" } as const)
+  // Browsing is read-only. Nothing here writes to the session until the clerk acts.
+  const vin = vehicle.vin
+  const state = vehicleState(session, vin, canRequest)
 
   const now = () => new Date().toISOString()
-  const onRequest = (applicant: string) =>
-    dispatch({ type: "request", otp: generateOtp(), requester: applicant, at: now() })
+  const onRequest = (applicant: ApplicantDetails) =>
+    dispatch({
+      type: "request",
+      vin,
+      canRequest,
+      otp: generateOtp(),
+      link: generateLinkToken(),
+      requester: applicant.name,
+      at: now(),
+    })
+  const onIssue = () =>
+    dispatch({ type: "issue", vin, packageNumber: generatePackageNumber(new Date()), at: now() })
   const onEscalate = () =>
-    dispatch({ type: "escalate", caseReference: generateCaseReference(new Date()), at: now() })
+    dispatch({
+      type: "escalate",
+      vin,
+      canRequest,
+      caseReference: generateCaseReference(new Date()),
+      at: now(),
+    })
 
   const events = deriveActivity(state, openedAt, OFFICE.clerk)
 
@@ -79,6 +94,7 @@ function VehicleView({ vehicle }: { vehicle: VehicleRecord }) {
             state={state}
             onRequest={onRequest}
             onEscalate={onEscalate}
+            onIssue={onIssue}
             settled={settled}
           />
           <ActivityTimeline events={events} />

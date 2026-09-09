@@ -4,14 +4,15 @@ import { createMemoryRouter, RouterProvider } from "react-router"
 import { describe, expect, it } from "vitest"
 
 import { SignIn } from "./SignIn"
+import { paths } from "@/lib/paths"
 
 function renderSignIn() {
   const router = createMemoryRouter(
     [
-      { path: "/", element: <SignIn /> },
-      { path: "/home", element: <div>home page</div> },
+      { path: paths.portal.signIn, element: <SignIn /> },
+      { path: paths.portal.home, element: <div>home page</div> },
     ],
-    { initialEntries: ["/"] }
+    { initialEntries: [paths.portal.signIn] }
   )
   render(<RouterProvider router={router} />)
   return router
@@ -25,12 +26,12 @@ describe("SignIn", () => {
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
   })
 
-  it("navigates to /home on submit", async () => {
+  it("navigates to the portal home on submit", async () => {
     const router = renderSignIn()
     await userEvent.type(screen.getByLabelText(/username/i), "mchen")
     await userEvent.type(screen.getByLabelText(/password/i), "secret")
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }))
-    expect(router.state.location.pathname).toBe("/home")
+    expect(router.state.location.pathname).toBe(paths.portal.home)
     expect(screen.getByText("home page")).toBeInTheDocument()
   })
 })

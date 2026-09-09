@@ -4,15 +4,16 @@ import { createMemoryRouter, RouterProvider } from "react-router"
 import { describe, expect, it } from "vitest"
 
 import { CLEAN_VIN, CLONED_VIN } from "@/lib/vehicles"
+import { paths } from "@/lib/paths"
 import { Lookup } from "./Lookup"
 
 function renderLookup() {
   const router = createMemoryRouter(
     [
-      { path: "/lookup", element: <Lookup /> },
-      { path: "/vehicle/:vin", element: <div>vehicle page</div> },
+      { path: paths.portal.lookup, element: <Lookup /> },
+      { path: paths.portal.vehiclePattern, element: <div>vehicle page</div> },
     ],
-    { initialEntries: ["/lookup"] }
+    { initialEntries: [paths.portal.lookup] }
   )
   render(<RouterProvider router={router} />)
   return router
@@ -24,7 +25,7 @@ describe("Lookup", () => {
     await userEvent.type(screen.getByLabelText(/vin/i), "ABC123")
     await userEvent.click(screen.getByRole("button", { name: /look up/i }))
     expect(screen.getByText(/17-character VIN/i)).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe("/lookup")
+    expect(router.state.location.pathname).toBe(paths.portal.lookup)
   })
 
   it("reports an unknown VIN", async () => {
@@ -38,12 +39,18 @@ describe("Lookup", () => {
     const router = renderLookup()
     await userEvent.type(screen.getByLabelText(/vin/i), CLEAN_VIN.toLowerCase())
     await userEvent.click(screen.getByRole("button", { name: /look up/i }))
-    expect(router.state.location.pathname).toBe(`/vehicle/${CLEAN_VIN}`)
+    expect(router.state.location.pathname).toBe(paths.portal.vehicle(CLEAN_VIN))
   })
 
   it("lists recent lookups that navigate on click", async () => {
     const router = renderLookup()
     await userEvent.click(screen.getByRole("button", { name: new RegExp(CLONED_VIN) }))
-    expect(router.state.location.pathname).toBe(`/vehicle/${CLONED_VIN}`)
+    expect(router.state.location.pathname).toBe(paths.portal.vehicle(CLONED_VIN))
+  })
+
+  it("submits on Enter, since the field deliberately has no form", async () => {
+    const router = renderLookup()
+    await userEvent.type(screen.getByLabelText(/vin/i), `${CLEAN_VIN}{Enter}`)
+    expect(router.state.location.pathname).toBe(paths.portal.vehicle(CLEAN_VIN))
   })
 })

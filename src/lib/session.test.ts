@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest"
 
-import { createSessionStore, EMPTY_SESSION, sessionReducer, STORAGE_KEY } from "./session"
+import {
+  activeAuthorization,
+  createSessionStore,
+  EMPTY_SESSION,
+  sessionReducer,
+  STORAGE_KEY,
+  vehicleState,
+} from "./session"
 
-const T0 = "2026-09-04T18:14:00.000Z"
+const T0 = "2026-09-09T18:14:00.000Z"
+const T1 = "2026-09-09T18:16:30.000Z"
+const A = "4JGFB8KB5PA812634"
+const B = "5TDEBRCH7SS041927"
+const LINK = "k7m2p9xq4tvn8bwz"
 
 function memoryStorage() {
   const map = new Map<string, string>()
@@ -27,131 +38,156 @@ function fakeChannel() {
   return ch as unknown as BroadcastChannel & { posted: unknown[] }
 }
 
+function request(vin = A, canRequest = true) {
+  return {
+    type: "request" as const,
+    vin,
+    canRequest,
+    otp: "482 193",
+    link: LINK,
+    requester: "Marcus B.",
+    at: T0,
+  }
+}
+
 describe("sessionReducer", () => {
-  it("open sets the vin and an idle/blocked authorization", () => {
-    expect(sessionReducer(EMPTY_SESSION, { type: "open", vin: "A", canRequest: true })).toEqual({
-      vin: "A",
-      authorization: { status: "idle" },
-    })
-    expect(sessionReducer(EMPTY_SESSION, { type: "open", vin: "B", canRequest: false })).toEqual({
-      vin: "B",
-      authorization: { status: "blocked" },
-    })
+  it("a clerk request creates the slot and makes it active", () => {
+    const s = sessionReducer(EMPTY_SESSION, request())
+    expect(s.activeVin).toBe(A)
+    expect(s.authorizations[A]).toMatchObject({ status: "pending", origin: "clerk", link: LINK })
   })
 
-  it("open with the same vin keeps the current authorization", () => {
-    const s = sessionReducer(EMPTY_SESSION, { type: "open", vin: "A", canRequest: true })
-    const pending = sessionReducer(s, {
-      type: "request",
-      otp: "482 193",
-      requester: "Fawaz A.",
-      at: T0,
+  it("keeps independent state for two vehicles at once", () => {
+    let s = sessionReducer(EMPTY_SESSION, request(A))
+    s = sessionReducer(s, {
+      type: "escalate",
+      vin: B,
+      canRequest: false,
+      caseReference: "OVIL-2026-09-09-0001",
+      at: T1,
     })
-    expect(sessionReducer(pending, { type: "open", vin: "A", canRequest: true })).toBe(pending)
+    expect(s.authorizations[A].status).toBe("pending")
+    expect(s.authorizations[B].status).toBe("escalated")
+    expect(s.activeVin, "escalation does not move the phone").toBe(A)
   })
 
-  it("open with a different vin resets authorization", () => {
-    const s = sessionReducer(EMPTY_SESSION, { type: "open", vin: "A", canRequest: true })
-    const pending = sessionReducer(s, {
-      type: "request",
-      otp: "482 193",
-      requester: "Fawaz A.",
-      at: T0,
+  it("owner actions target their vehicle and ignore a missing slot", () => {
+    const s = sessionReducer(EMPTY_SESSION, request(A))
+    const approved = sessionReducer(s, {
+      type: "approve",
+      vin: A,
+      authorizationCode: "OV-AAAA-BBBB",
+      at: T1,
     })
-    expect(sessionReducer(pending, { type: "open", vin: "B", canRequest: true })).toEqual({
-      vin: "B",
-      authorization: { status: "idle" },
-    })
+    expect(approved.authorizations[A]).toMatchObject({ status: "authorized", link: LINK })
+    expect(sessionReducer(s, { type: "approve", vin: B, authorizationCode: "X", at: T1 })).toBe(s)
   })
 
-  it("forwards authorization actions and returns the same object when nothing changes", () => {
-    const s = sessionReducer(EMPTY_SESSION, { type: "open", vin: "A", canRequest: true })
-    expect(sessionReducer(s, { type: "approve", authorizationCode: "X", at: T0 })).toBe(s)
-    expect(
-      sessionReducer(s, { type: "request", otp: "1", requester: "F", at: T0 }).authorization.status
-    ).toBe("pending")
+  it("returns the same object when an action does not apply", () => {
+    const s = sessionReducer(EMPTY_SESSION, request(A))
+    expect(sessionReducer(s, request(A)), "request on pending").toBe(s)
+    expect(sessionReducer(s, { type: "issue", vin: A, packageNumber: "X", at: T1 })).toBe(s)
   })
 
-  it("preapprove sets the vin and an owner authorization that survives open for the same vin", () => {
-    const s = sessionReducer(EMPTY_SESSION, {
+  it("preapprove and buyerRequest set the slot and the active vehicle", () => {
+    const pre = sessionReducer(EMPTY_SESSION, {
       type: "preapprove",
-      vin: "A",
+      vin: A,
       owner: "Daniel Okafor",
       authorizationCode: "OV-AAAA-BBBB",
       at: T0,
     })
-    expect(s.vin).toBe("A")
-    expect(s.authorization).toMatchObject({ status: "authorized", origin: "owner" })
-    expect(sessionReducer(s, { type: "open", vin: "A", canRequest: true })).toBe(s)
-  })
-
-  it("buyerRequest sets the vin and a pending buyer request", () => {
-    const s = sessionReducer(EMPTY_SESSION, {
+    expect(pre).toMatchObject({
+      activeVin: A,
+      authorizations: { [A]: { status: "authorized", origin: "owner" } },
+    })
+    const buy = sessionReducer(EMPTY_SESSION, {
       type: "buyerRequest",
-      vin: "A",
-      buyer: "Fawaz Ahmed",
+      vin: A,
+      buyer: "Marcus Beaulieu",
       otp: "111 222",
+      link: LINK,
       at: T0,
     })
-    expect(s).toMatchObject({
-      vin: "A",
-      authorization: { status: "pending", origin: "buyer", requester: "Fawaz Ahmed" },
-    })
+    expect(buy.authorizations[A]).toMatchObject({ status: "pending", origin: "buyer", link: LINK })
   })
 
-  it("clear returns the empty session", () => {
-    const s = sessionReducer(EMPTY_SESSION, { type: "open", vin: "A", canRequest: true })
+  it("clear empties everything; force replaces everything", () => {
+    const s = sessionReducer(EMPTY_SESSION, request(A))
     expect(sessionReducer(s, { type: "clear" })).toEqual(EMPTY_SESSION)
+    const forced = { authorizations: { [B]: { status: "blocked" as const } }, activeVin: B }
+    expect(sessionReducer(s, { type: "force", session: forced })).toBe(forced)
+  })
+})
+
+describe("selectors", () => {
+  it("vehicleState falls back to what the record checks imply", () => {
+    expect(vehicleState(EMPTY_SESSION, A, true)).toEqual({ status: "idle" })
+    expect(vehicleState(EMPTY_SESSION, B, false)).toEqual({ status: "blocked" })
+    const s = sessionReducer(EMPTY_SESSION, request(A))
+    expect(vehicleState(s, A, true).status).toBe("pending")
+  })
+
+  it("activeAuthorization is null until something is requested", () => {
+    expect(activeAuthorization(EMPTY_SESSION)).toBeNull()
+    const s = sessionReducer(EMPTY_SESSION, request(A))
+    expect(activeAuthorization(s)).toMatchObject({ vin: A, state: { status: "pending" } })
   })
 })
 
 describe("createSessionStore", () => {
-  it("starts empty, persists on dispatch, and broadcasts", () => {
+  it("starts empty, persists on dispatch, and pings the channel", () => {
     const storage = memoryStorage()
     const channel = fakeChannel()
-    const store = createSessionStore({ storage, channel })
-    expect(store.getState()).toEqual(EMPTY_SESSION)
-
+    const store = createSessionStore({ storage, channel, warn: () => {} })
     let notified = 0
     store.subscribe(() => notified++)
-    store.dispatch({ type: "open", vin: "A", canRequest: true })
-
+    store.dispatch(request(A))
     expect(notified).toBe(1)
     expect(JSON.parse(storage.map.get(STORAGE_KEY)!)).toEqual(store.getState())
-    expect(channel.posted).toHaveLength(1)
+    expect(channel.posted).toEqual(["changed"])
   })
 
-  it("hydrates from storage", () => {
+  it("treats storage as the source of truth, not its own copy", () => {
+    // Two stores share one storage, like two windows. Neither is told about the other.
     const storage = memoryStorage()
-    storage.setItem(STORAGE_KEY, JSON.stringify({ vin: "A", authorization: { status: "blocked" } }))
-    const store = createSessionStore({ storage, channel: null })
-    expect(store.getState()).toEqual({ vin: "A", authorization: { status: "blocked" } })
+    const clerk = createSessionStore({ storage, channel: null, warn: () => {} })
+    const phone = createSessionStore({ storage, channel: null, warn: () => {} })
+    clerk.dispatch(request(A))
+    // The phone's in-memory copy is stale, yet approving computes from storage.
+    phone.dispatch({ type: "approve", vin: A, authorizationCode: "OV-AAAA-BBBB", at: T1 })
+    expect(phone.getState().authorizations[A].status).toBe("authorized")
+    expect(JSON.parse(storage.map.get(STORAGE_KEY)!).authorizations[A].status).toBe("authorized")
   })
 
-  it("ignores corrupt storage", () => {
+  it("re-reads storage when pinged", () => {
+    const storage = memoryStorage()
+    const channel = fakeChannel()
+    const store = createSessionStore({ storage, channel, warn: () => {} })
+    storage.setItem(STORAGE_KEY, JSON.stringify(sessionReducer(EMPTY_SESSION, request(A))))
+    let notified = 0
+    store.subscribe(() => notified++)
+    channel.onmessage?.({ data: "changed" } as MessageEvent)
+    expect(store.getState().authorizations[A].status).toBe("pending")
+    expect(notified).toBe(1)
+  })
+
+  it("ignores corrupt or v1 storage", () => {
     const storage = memoryStorage()
     storage.setItem(STORAGE_KEY, "{nope")
     expect(createSessionStore({ storage, channel: null }).getState()).toEqual(EMPTY_SESSION)
+    storage.setItem(STORAGE_KEY, JSON.stringify({ vin: A, authorization: { status: "idle" } }))
+    expect(createSessionStore({ storage, channel: null }).getState()).toEqual(EMPTY_SESSION)
   })
 
-  it("applies incoming channel messages", () => {
-    const channel = fakeChannel()
-    const store = createSessionStore({ storage: null, channel })
-    let notified = 0
-    store.subscribe(() => notified++)
-    const incoming = { vin: "Z", authorization: { status: "idle" } }
-    channel.onmessage?.({ data: { state: incoming } } as MessageEvent)
-    expect(store.getState()).toEqual(incoming)
-    expect(notified).toBe(1)
-  })
-
-  it("does not notify or persist when an action is a no-op", () => {
-    const storage = memoryStorage()
-    const store = createSessionStore({ storage, channel: null })
-    let notified = 0
-    store.subscribe(() => notified++)
-    store.dispatch({ type: "approve", authorizationCode: "X", at: T0 })
-    expect(notified).toBe(0)
-    expect(storage.map.size).toBe(0)
+  it("says so out loud when an action is ignored", () => {
+    const warnings: string[] = []
+    const store = createSessionStore({
+      storage: memoryStorage(),
+      channel: null,
+      warn: (m) => warnings.push(m),
+    })
+    store.dispatch({ type: "approve", vin: A, authorizationCode: "X", at: T1 })
+    expect(warnings).toEqual(["[ovil] ignored approve in no record"])
   })
 })

@@ -20,8 +20,8 @@ reply codes to an SMS link that opens a one-page yes/no, used by every path.
 | --- | --- |
 | Owner response | One link-based confirm page for clerk- and buyer-initiated requests |
 | Seller identity check | Ontario driver's licence number + mocked photo capture that resolves to Verified |
-| Entry page | Compact ServiceOntario replica with a new UVIP tile |
-| Theme | Scoped `.theme-so` token override (violet / mauve / near-black) on public pages only |
+| Entry page | Saved copy of ontario.ca/page/serviceontario, scripts stripped, with a new UVIP card and link |
+| Theme | Scoped `.theme-so` override matching ontario.ca: Raleway/Open Sans, #0066CC, ServiceOntario green band |
 | Email to seller | Not shown; SMS only |
 | Integration story | Standalone; clerk Alt+Tabs to OVIL |
 
@@ -76,23 +76,25 @@ Portal changes:
 
 ## Theme
 
-`.theme-so` on the public pages' root sets: `--primary` deep violet
-(oklch ≈ 0.38 0.14 300), `--primary-foreground` white, `--accent`/`--muted`
-mauve tints, `--foreground` near-black, `--ring` violet, `--radius` 0.375rem.
-Ontario header bar is near-black with white "Ontario" wordmark text. Font stays
-Public Sans.
+`.theme-so` on the public pages' root matches ontario.ca: Raleway Modified for
+headings, Open Sans for body (both mirrored from the saved theme), `--primary`
+#0066CC, near-black `--foreground`, `--radius` 0.25rem. The header bar carries
+the real Ontario logo and the band below it is ServiceOntario green (#054426)
+with the real ServiceOntario wordmark.
 
 ## Demo data
 
-- Owner: Daniel Okafor, licence `O1234-56789-01234` (masked in UI), mobile
-  ending 0917.
-- Buyer: Fawaz Ahmed, licence `A5678-12345-67890`, mobile ending 4410.
+- Owner: Daniel Okafor, licence `D6101-40706-60905` (matches the specimen card
+  shown in the capture step; masked on review), mobile ending 0917.
+- Buyer: Marcus Beaulieu, licence `B2947-51083-64712`, mobile ending 4410.
 - Pre-approval validity 30 days.
 
 ## Motion
 
-Stepper panels cross-fade (150 ms out / 200 ms in, y 8). Photo capture card:
-frame outline → 600 ms "scanning" bar → check. Confirm page result: check icon
+Stepper panels cross-fade (150 ms out / 200 ms in, y 8). Photo capture: the
+specimen licence rests on a white surface with corner brackets, then a 1.4 s
+scan line sweeps the whole surface, then the card renders crisp and the header
+shows "Verified". No overlay is drawn on the card itself. Confirm page result: check icon
 scale 0.25→1 with blur 4→0, spring bounce 0. Phone bubble for the system line
 enters staggered like replies.
 

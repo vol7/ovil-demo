@@ -1,49 +1,52 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { createBrowserRouter, RouterProvider } from "react-router"
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router"
 
 import "./index.css"
+import { ConfirmPage } from "@/components/phone/ConfirmPage"
+import { PhoneScreen } from "@/components/phone/PhoneScreen"
 import { PortalShell } from "@/components/PortalShell"
+import { paths } from "@/lib/paths"
 import { Cases } from "@/routes/Cases"
 import { Home } from "@/routes/Home"
 import { Hub } from "@/routes/Hub"
 import { Lookup } from "@/routes/Lookup"
 import { Phone } from "@/routes/Phone"
-import { ServiceOntario } from "@/routes/public/ServiceOntario"
 import { Uvip } from "@/routes/public/Uvip"
 import { UvipBuyer } from "@/routes/public/UvipBuyer"
 import { UvipOwner } from "@/routes/public/UvipOwner"
-import { ConfirmPage } from "@/components/phone/ConfirmPage"
-import { PhoneScreen } from "@/components/phone/PhoneScreen"
 import { Requests } from "@/routes/Requests"
 import { SignIn } from "@/routes/SignIn"
 import { Vehicle } from "@/routes/Vehicle"
 
 const router = createBrowserRouter([
-  { path: "/", element: <SignIn /> },
-  { path: "/demo", element: <Hub /> },
+  { path: paths.hub, element: <Hub /> },
+  { path: paths.demo, element: <Navigate to={paths.hub} replace /> },
+
+  { path: paths.portal.signIn, element: <SignIn /> },
   {
-    path: "/phone",
+    element: <PortalShell />,
+    children: [
+      { path: paths.portal.home, element: <Home /> },
+      { path: paths.portal.lookup, element: <Lookup /> },
+      { path: paths.portal.vehiclePattern, element: <Vehicle /> },
+      { path: paths.portal.requests, element: <Requests /> },
+      { path: paths.portal.cases, element: <Cases /> },
+    ],
+  },
+
+  {
+    path: paths.phone,
     element: <Phone />,
     children: [
       { index: true, element: <PhoneScreen /> },
       { path: "confirm", element: <ConfirmPage /> },
     ],
   },
-  { path: "/serviceontario", element: <ServiceOntario /> },
-  { path: "/uvip", element: <Uvip /> },
-  { path: "/uvip/owner", element: <UvipOwner /> },
-  { path: "/uvip/buyer", element: <UvipBuyer /> },
-  {
-    element: <PortalShell />,
-    children: [
-      { path: "/home", element: <Home /> },
-      { path: "/lookup", element: <Lookup /> },
-      { path: "/vehicle/:vin", element: <Vehicle /> },
-      { path: "/requests", element: <Requests /> },
-      { path: "/cases", element: <Cases /> },
-    ],
-  },
+
+  { path: paths.uvip, element: <Uvip /> },
+  { path: paths.uvipOwner, element: <UvipOwner /> },
+  { path: paths.uvipBuyer, element: <UvipBuyer /> },
 ])
 
 createRoot(document.getElementById("root")!).render(

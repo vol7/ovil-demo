@@ -1,7 +1,6 @@
 import { Check } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { useState } from "react"
-import { Link } from "react-router"
 
 import { PhotoCapture } from "@/components/public/PhotoCapture"
 import { PublicShell } from "@/components/public/PublicShell"
@@ -11,14 +10,14 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { generateAuthorizationCode } from "@/lib/authorization"
-import { formatDate } from "@/lib/format"
-import { maskLicence, OWNER } from "@/lib/people"
+import { formatDate, maskName } from "@/lib/format"
+import { OWNER } from "@/lib/people"
 import { useSession } from "@/lib/session"
 import { vehicleTitle, type Vehicle } from "@/lib/vehicles"
 
 const STEPS = ["Vehicle", "Identity", "Review"]
 const CRUMBS = [
-  { label: "ServiceOntario", to: "/serviceontario" },
+  { label: "ServiceOntario", to: "/serviceontario/" },
   { label: "Used Vehicle Information Package", to: "/uvip" },
   { label: "Registered owner" },
 ]
@@ -45,8 +44,13 @@ function Field({
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`h-11 md:text-base ${mono ? "font-mono tracking-wider" : ""}`}
+        size="lg"
+        className={mono ? "font-mono tracking-wider" : undefined}
         autoComplete="off"
+        spellCheck={false}
+        data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
       />
       {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
     </div>
@@ -67,7 +71,6 @@ export function UvipOwner() {
   const reduceMotion = useReducedMotion()
   const [step, setStep] = useState(0)
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
-  const [name, setName] = useState<string>(OWNER.name)
   const [licence, setLicence] = useState<string>(OWNER.licence)
   const [mobile, setMobile] = useState<string>(OWNER.mobile)
   const [photoOk, setPhotoOk] = useState(false)
@@ -80,7 +83,7 @@ export function UvipOwner() {
     dispatch({
       type: "preapprove",
       vin: vehicle.vin,
-      owner: name,
+      owner: vehicle.owner.name,
       authorizationCode: code,
       at: at.toISOString(),
     })
@@ -123,8 +126,8 @@ export function UvipOwner() {
             <dl className="divide-y">
               <ReviewRow label="Vehicle" value={vehicleTitle(vehicle)} />
               <ReviewRow
-                label="Plate"
-                value={<span className="font-mono tracking-wider">{vehicle.plate}</span>}
+                label="VIN"
+                value={<span className="font-mono tracking-wider">{vehicle.vin}</span>}
               />
               <ReviewRow
                 label="Reference"
@@ -137,9 +140,9 @@ export function UvipOwner() {
               centre. The clerk will see this authorization when they look up the vehicle. We have
               sent a copy of this reference to your phone ending in {OWNER.mobileLast4}.
             </p>
-            <Link to="/serviceontario" className={buttonVariants({ variant: "outline" })}>
+            <a href="/serviceontario/" className={buttonVariants({ variant: "outline" })}>
               Back to ServiceOntario
-            </Link>
+            </a>
           </motion.section>
         ) : (
           <>
@@ -165,10 +168,9 @@ export function UvipOwner() {
                   <div className="flex flex-col gap-1">
                     <h2 className="text-lg font-semibold">Verify your identity</h2>
                     <p className="text-sm text-muted-foreground">
-                      Your details must match the registered owner of the {vehicleTitle(vehicle)}.
+                      Your licence must match the registered owner of the {vehicleTitle(vehicle)}.
                     </p>
                   </div>
-                  <Field id="owner-name" label="Full legal name" value={name} onChange={setName} />
                   <Field
                     id="owner-licence"
                     label="Ontario driver's licence number"
@@ -186,16 +188,10 @@ export function UvipOwner() {
                   />
                   <PhotoCapture onVerified={() => setPhotoOk(true)} />
                   <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="h-11"
-                      onClick={() => setStep(0)}
-                    >
+                    <Button type="button" variant="outline" size="lg" onClick={() => setStep(0)}>
                       Back
                     </Button>
-                    <Button type="submit" size="lg" className="h-11 px-5" disabled={!photoOk}>
+                    <Button type="submit" size="lg" disabled={!photoOk}>
                       Continue
                     </Button>
                   </div>
@@ -214,15 +210,13 @@ export function UvipOwner() {
                   <dl className="divide-y rounded-xl border bg-card px-5">
                     <ReviewRow label="Vehicle" value={vehicleTitle(vehicle)} />
                     <ReviewRow
-                      label="Plate"
-                      value={<span className="font-mono tracking-wider">{vehicle.plate}</span>}
+                      label="VIN"
+                      value={<span className="font-mono tracking-wider">{vehicle.vin}</span>}
                     />
-                    <ReviewRow label="Registered owner" value={name} />
+                    <ReviewRow label="Registered owner" value={maskName(vehicle.owner.name)} />
                     <ReviewRow
                       label="Driver's licence"
-                      value={
-                        <span className="font-mono tracking-wider">{maskLicence(licence)}</span>
-                      }
+                      value={<span className="font-mono tracking-wider">{licence}</span>}
                     />
                     <ReviewRow
                       label="Identity"
@@ -231,16 +225,10 @@ export function UvipOwner() {
                     <ReviewRow label="Valid for" value="30 days" />
                   </dl>
                   <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="h-11"
-                      onClick={() => setStep(1)}
-                    >
+                    <Button type="button" variant="outline" size="lg" onClick={() => setStep(1)}>
                       Back
                     </Button>
-                    <Button type="button" size="lg" className="h-11 px-5" onClick={submit}>
+                    <Button type="button" size="lg" onClick={submit}>
                       Confirm and pre-approve
                     </Button>
                   </div>

@@ -49,7 +49,7 @@ export type RequestRow = {
   vehicle: string
   plate: string
   applicant: string
-  status: "Authorized" | "Pending" | "Frozen" | "Expired"
+  status: "Authorized" | "Issued" | "Pending" | "Frozen" | "Expired"
   when: string
 }
 

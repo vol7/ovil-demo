@@ -1,5 +1,5 @@
 import { CircleCheck, Clock, ShieldAlert, Snowflake } from "lucide-react"
-import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 import { useState } from "react"
 
 import { Countdown } from "@/components/Countdown"
@@ -10,14 +10,19 @@ import { Label } from "@/components/ui/label"
 import type { AuthorizationState } from "@/lib/authorization"
 import { allPass, failingChecks, type Check } from "@/lib/checks"
 import { formatDate, formatTime } from "@/lib/format"
+import { BUYER } from "@/lib/people"
 import type { Vehicle } from "@/lib/vehicles"
+
+/** What the clerk types before requesting owner authorization. */
+export type ApplicantDetails = { name: string; licence: string; mobile: string }
 
 type Props = {
   vehicle: Vehicle
   checks: Check[]
   state: AuthorizationState
-  onRequest: (applicant: string) => void
+  onRequest: (applicant: ApplicantDetails) => void
   onEscalate: () => void
+  onIssue: () => void
   /** While false, the verdict (helper + blocked box) is held back until checks settle. */
   settled?: boolean
 }
@@ -53,21 +58,61 @@ function StatusBox({
   )
 }
 
+function Field({
+  id,
+  label,
+  value,
+  onChange,
+  mono,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (v: string) => void
+  mono?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={mono ? "font-mono tracking-wider" : undefined}
+        autoComplete="off"
+        spellCheck={false}
+        data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
+      />
+    </div>
+  )
+}
+
+/** Who the request was for, once it exists. */
+function applicantLabel(state: AuthorizationState, typed: string): string {
+  if ("requester" in state) {
+    if (state.origin === "owner") return "Any buyer · pre-approved by the owner"
+    return state.origin === "buyer" ? `${state.requester} · requested online` : state.requester
+  }
+  return typed
+}
+
 export function PackagePanel({
   vehicle,
   checks,
   state,
   onRequest,
   onEscalate,
+  onIssue,
   settled = true,
 }: Props) {
   const reduceMotion = useReducedMotion()
-  const [applicant, setApplicant] = useState("Fawaz A.")
-  // A buyer who started the request online is the applicant at the counter.
-  const shownApplicant = "origin" in state && state.origin === "buyer" ? state.requester : applicant
+  const [name, setName] = useState<string>(BUYER.name)
+  const [licence, setLicence] = useState<string>(BUYER.licence)
+  const [mobile, setMobile] = useState<string>(BUYER.mobile)
   const canRequest = allPass(checks)
   const failing = failingChecks(checks)
-  const requestDisabled = !canRequest || state.status !== "idle"
   const editable = state.status === "idle" || state.status === "blocked"
   const showStatus = state.status !== "idle" && (state.status !== "blocked" || settled)
 
@@ -80,34 +125,51 @@ export function PackagePanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="gap-5">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="applicant">Applicant</Label>
-          {editable ? (
-            <Input
-              id="applicant"
-              value={applicant}
-              onChange={(e) => setApplicant(e.target.value)}
-            />
-          ) : (
+        {editable ? (
+          <div className="flex flex-col gap-4">
+            <Field id="applicant-name" label="Applicant" value={name} onChange={setName} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                id="applicant-licence"
+                label="Driver's licence"
+                value={licence}
+                onChange={setLicence}
+                mono
+              />
+              <Field
+                id="applicant-mobile"
+                label="Mobile number"
+                value={mobile}
+                onChange={setMobile}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="applicant">Applicant</Label>
             <div
               id="applicant"
               className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm"
             >
-              {shownApplicant}
+              {applicantLabel(state, name)}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           {state.status === "authorized" ? null : (
-            <Button size="lg" disabled={requestDisabled} onClick={() => onRequest(applicant)}>
+            <Button
+              size="lg"
+              disabled={state.status !== "idle"}
+              onClick={() => onRequest({ name, licence, mobile })}
+            >
               Request owner authorization
             </Button>
           )}
           {canRequest && state.status === "idle" ? (
             <p className="text-sm text-muted-foreground">
-              A one-time code will be sent to the registered owner&apos;s phone ending in{" "}
-              {vehicle.owner.phoneLast4}.
+              The registered owner will receive a text at the phone ending in{" "}
+              {vehicle.owner.phoneLast4} with a link to approve or decline.
             </p>
           ) : null}
           {!canRequest && settled && state.status !== "blocked" && state.status !== "escalated" ? (
@@ -118,125 +180,132 @@ export function PackagePanel({
           ) : null}
         </div>
 
-        <AnimatePresence mode="wait" initial={false}>
-          {showStatus ? (
-            <motion.div
-              key={state.status}
-              initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={
-                reduceMotion
-                  ? undefined
-                  : { opacity: 0, y: -12, filter: "blur(4px)", transition: { duration: 0.15 } }
-              }
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              {state.status === "blocked" ? (
-                <StatusBox
-                  tone="danger"
-                  icon={<ShieldAlert className="size-4 text-destructive" aria-hidden />}
-                  title="Transaction blocked"
-                >
+        {/*
+          Keyed remount, deliberately without AnimatePresence: an exit animation here
+          never settled, which left the panel showing a stale status. Correct state
+          beats a fade-out.
+        */}
+        {showStatus ? (
+          <motion.div
+            key={state.status}
+            initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            {state.status === "blocked" ? (
+              <StatusBox
+                tone="danger"
+                icon={<ShieldAlert className="size-4 text-destructive" aria-hidden />}
+                title="Package not issued"
+              >
+                <p className="text-sm text-muted-foreground">
+                  {failing.length} record {failing.length === 1 ? "check" : "checks"} failed. This
+                  package cannot be issued until the flagged records are resolved.
+                </p>
+                <div className="mt-2">
+                  <Button variant="destructive" onClick={onEscalate}>
+                    Escalate to law enforcement
+                  </Button>
+                </div>
+              </StatusBox>
+            ) : null}
+
+            {state.status === "escalated" ? (
+              <StatusBox
+                tone="danger"
+                icon={<ShieldAlert className="size-4 text-destructive" aria-hidden />}
+                title="Escalated for review"
+              >
+                <p className="text-sm text-muted-foreground">
+                  Do not issue the package. Case opened at {formatTime(state.escalatedAt)}
+                </p>
+                <p className="font-mono text-sm tracking-wider">{state.caseReference}</p>
+              </StatusBox>
+            ) : null}
+
+            {state.status === "pending" ? (
+              <StatusBox
+                tone="info"
+                icon={<Clock className="size-4 text-primary" aria-hidden />}
+                title={
+                  state.origin === "buyer"
+                    ? "Awaiting registered owner"
+                    : "Request sent to registered owner"
+                }
+              >
+                {state.origin === "buyer" ? (
                   <p className="text-sm text-muted-foreground">
-                    {failing.length} record {failing.length === 1 ? "check" : "checks"} failed. This
-                    VIN cannot be transferred until the flagged records are resolved.
+                    Requested online by {state.requester} at {formatTime(state.sentAt)} via
+                    ServiceOntario.
                   </p>
-                  <div className="mt-2">
-                    <Button variant="destructive" onClick={onEscalate}>
-                      Escalate to Insurance Hub / Law Enforcement
-                    </Button>
+                ) : null}
+                <p className="text-sm text-muted-foreground">
+                  Expires in <Countdown expiresAt={state.expiresAt} />
+                </p>
+                <p className="text-sm text-muted-foreground">Waiting for response…</p>
+              </StatusBox>
+            ) : null}
+
+            {state.status === "authorized" ? (
+              <StatusBox
+                tone="success"
+                icon={<CircleCheck className="size-4 text-emerald-600" aria-hidden />}
+                title={
+                  state.origin === "owner"
+                    ? "Authorization on file"
+                    : "Authorized by registered owner"
+                }
+              >
+                {state.origin === "owner" ? (
+                  <p className="text-sm text-muted-foreground">
+                    Pre-approved online by the registered owner on{" "}
+                    {formatDate(state.approvedAt.slice(0, 10))} via ServiceOntario · valid until{" "}
+                    {formatDate(state.validUntil.slice(0, 10))}
+                  </p>
+                ) : state.origin === "buyer" ? (
+                  <p className="text-sm text-muted-foreground">
+                    Requested online by {state.requester} · approved by the owner at{" "}
+                    {formatTime(state.approvedAt)}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Approved by the owner at {formatTime(state.approvedAt)} from the confirmation
+                    link
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-muted-foreground">Authorization reference</p>
+                <p className="font-mono text-base tracking-wider">{state.authorizationCode}</p>
+                {state.issued ? (
+                  <div className="mt-2 flex flex-col gap-0.5">
+                    <p className="text-sm font-medium text-emerald-700">
+                      Package issued at {formatTime(state.issued.at)}
+                    </p>
+                    <p className="font-mono text-sm tracking-wider">{state.issued.packageNumber}</p>
                   </div>
-                </StatusBox>
-              ) : null}
+                ) : (
+                  <div className="mt-2">
+                    <Button onClick={onIssue}>Issue Used Vehicle Information Package</Button>
+                  </div>
+                )}
+              </StatusBox>
+            ) : null}
 
-              {state.status === "escalated" ? (
-                <StatusBox
-                  tone="danger"
-                  icon={<ShieldAlert className="size-4 text-destructive" aria-hidden />}
-                  title="Escalated for review"
-                >
-                  <p className="text-sm text-muted-foreground">
-                    Do not release the vehicle. Case opened at {formatTime(state.escalatedAt)}
-                  </p>
-                  <p className="font-mono text-sm tracking-wider">{state.caseReference}</p>
-                </StatusBox>
-              ) : null}
-
-              {state.status === "pending" ? (
-                <StatusBox
-                  tone="info"
-                  icon={<Clock className="size-4 text-primary" aria-hidden />}
-                  title={
-                    state.origin === "buyer"
-                      ? "Awaiting registered owner"
-                      : "Request sent to registered owner"
-                  }
-                >
-                  {state.origin === "buyer" ? (
-                    <p className="text-sm text-muted-foreground">
-                      Requested online by {state.requester} at {formatTime(state.sentAt)} via
-                      ServiceOntario.
-                    </p>
-                  ) : null}
-                  <p className="text-sm text-muted-foreground">
-                    Expires in <Countdown expiresAt={state.expiresAt} />
-                  </p>
-                  <p className="text-sm text-muted-foreground">Waiting for response…</p>
-                </StatusBox>
-              ) : null}
-
-              {state.status === "authorized" ? (
-                <StatusBox
-                  tone="success"
-                  icon={<CircleCheck className="size-4 text-emerald-600" aria-hidden />}
-                  title={
-                    state.origin === "owner"
-                      ? "Authorization on file"
-                      : "Authorized by registered owner"
-                  }
-                >
-                  {state.origin === "owner" ? (
-                    <p className="text-sm text-muted-foreground">
-                      Pre-approved online by the registered owner on{" "}
-                      {formatDate(state.approvedAt.slice(0, 10))} via ServiceOntario · valid until{" "}
-                      {formatDate(state.validUntil.slice(0, 10))}
-                    </p>
-                  ) : state.origin === "buyer" ? (
-                    <p className="text-sm text-muted-foreground">
-                      Requested online by {state.requester} · approved by the owner at{" "}
-                      {formatTime(state.approvedAt)}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Approved by the owner at {formatTime(state.approvedAt)} from the confirmation
-                      link
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-muted-foreground">Authorization reference</p>
-                  <p className="font-mono text-base tracking-wider">{state.authorizationCode}</p>
-                  <p className="mt-1 text-sm font-medium text-emerald-700">
-                    Clear to proceed with used vehicle package.
-                  </p>
-                </StatusBox>
-              ) : null}
-
-              {state.status === "frozen" ? (
-                <StatusBox
-                  tone="warning"
-                  icon={<Snowflake className="size-4 text-amber-600" aria-hidden />}
-                  title="Frozen — flagged for security review"
-                >
-                  <p className="text-sm text-muted-foreground">
-                    {state.reason === "denied"
-                      ? "Owner denied the request."
-                      : "No response within 24 hours."}{" "}
-                    Recorded at {formatTime(state.frozenAt)}
-                  </p>
-                </StatusBox>
-              ) : null}
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+            {state.status === "frozen" ? (
+              <StatusBox
+                tone="warning"
+                icon={<Snowflake className="size-4 text-amber-600" aria-hidden />}
+                title="Frozen — flagged for security review"
+              >
+                <p className="text-sm text-muted-foreground">
+                  {state.reason === "denied"
+                    ? "Owner denied the request."
+                    : "No response within 24 hours."}{" "}
+                  Recorded at {formatTime(state.frozenAt)}
+                </p>
+              </StatusBox>
+            ) : null}
+          </motion.div>
+        ) : null}
       </CardContent>
     </Card>
   )

@@ -3,12 +3,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { useNavigate } from "react-router"
 
 import { StatusBar } from "@/components/phone/PhoneChrome"
-import { smsLink } from "@/lib/sms"
 import { formatDate, formatTime } from "@/lib/format"
-import { OFFICE } from "@/lib/office"
 import { useSession } from "@/lib/session"
+import { liveThread } from "@/lib/thread"
+import { smsLink } from "@/lib/sms"
 import { cn } from "@/lib/utils"
-import { findVehicle, vehicleTitle, type Vehicle } from "@/lib/vehicles"
+import { vehicleTitle, type Vehicle } from "@/lib/vehicles"
 
 const BUBBLE_ENTER = { duration: 0.22, ease: "easeOut" } as const
 
@@ -89,12 +89,7 @@ function ContextBubble({ vehicle }: { vehicle: Vehicle | undefined }) {
 export function PhoneScreen() {
   const [session] = useSession()
   const navigate = useNavigate()
-  const state = session.authorization
-  const vehicle = session.vin ? findVehicle(session.vin) : undefined
-  const live =
-    (state.status === "pending" || state.status === "authorized" || state.status === "frozen") &&
-    state.origin !== "owner" &&
-    vehicle
+  const thread = liveThread(session)
 
   return (
     <div
@@ -107,47 +102,48 @@ export function PhoneScreen() {
 
       <div className="flex min-h-0 flex-1 flex-col justify-end overflow-y-auto px-3 pb-3">
         <div className="flex flex-col gap-2.5 pt-3">
-          <ContextBubble vehicle={vehicle} />
+          <ContextBubble vehicle={thread?.vehicle} />
 
           <AnimatePresence initial={false}>
-            {live ? (
+            {thread ? (
               <motion.div
-                key={`thread-${state.sentAt}`}
+                key={`thread-${thread.state.sentAt}`}
                 className="flex flex-col gap-2.5"
                 initial={false}
               >
-                <Separator>Today {formatTime(state.sentAt)}</Separator>
+                <Separator>Today {formatTime(thread.state.sentAt)}</Separator>
                 <Bubble from="ovil">
                   OVIL: A Used Vehicle Information Package was requested for your{" "}
-                  {vehicleTitle(vehicle)} (plate {vehicle.plate}){" "}
-                  {state.origin === "buyer" ? `online by ${state.requester}` : `at ${OFFICE.name}`}.
-                  Review and approve or decline:{" "}
+                  {vehicleTitle(thread.vehicle)} (plate {thread.vehicle.plate}) by{" "}
+                  {thread.state.requester}. Review and approve or decline:{" "}
                   <button
                     type="button"
                     onClick={() => navigate("/phone/confirm")}
-                    className="font-normal text-[#0a84ff] underline decoration-[#0a84ff]/60 underline-offset-2"
+                    className="font-normal break-all text-[#0a84ff] underline decoration-[#0a84ff]/60 underline-offset-2"
                   >
-                    {smsLink(state.otp)}
+                    {smsLink(thread.state.link)}
                   </button>
                   . Expires in 24 hours.
                 </Bubble>
 
-                {state.status === "authorized" ? (
+                {thread.state.status === "authorized" ? (
                   <Bubble from="ovil" delay={0.3}>
                     Thanks — your authorization has been recorded. Reference{" "}
-                    <span className="font-semibold tracking-wide">{state.authorizationCode}</span>.
-                    It is valid for 30 days.
+                    <span className="font-semibold tracking-wide">
+                      {thread.state.authorizationCode}
+                    </span>
+                    . It is valid for 30 days.
                   </Bubble>
                 ) : null}
 
-                {state.status === "frozen" && state.reason === "denied" ? (
+                {thread.state.status === "frozen" && thread.state.reason === "denied" ? (
                   <Bubble from="ovil" delay={0.3}>
                     Understood. The request was declined and the transaction has been flagged for
                     review. No package will be issued.
                   </Bubble>
                 ) : null}
 
-                {state.status === "frozen" && state.reason === "timeout" ? (
+                {thread.state.status === "frozen" && thread.state.reason === "timeout" ? (
                   <Bubble from="ovil" delay={0.2}>
                     This request expired with no response. The transaction has been frozen and
                     flagged for review.

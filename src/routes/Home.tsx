@@ -12,6 +12,7 @@ import { OFFICE } from "@/lib/office"
 import { TODAY_STATS } from "@/lib/seed"
 import { useSession } from "@/lib/session"
 import { findVehicle, vehicleTitle } from "@/lib/vehicles"
+import { paths } from "@/lib/paths"
 
 function todayLabel(): string {
   return new Date().toLocaleDateString("en-CA", {
@@ -23,10 +24,14 @@ function todayLabel(): string {
 
 export function Home() {
   const [session] = useSession()
-  const auth = session.authorization
-  const liveVehicle = session.vin ? findVehicle(session.vin) : undefined
-  const pendingCount = auth.status === "pending" ? 1 : 0
-  const casesOpened = TODAY_STATS.casesOpened + (auth.status === "escalated" ? 1 : 0)
+  const slots = Object.entries(session.authorizations)
+  const pending = slots.flatMap(([vin, auth]) => {
+    const vehicle = findVehicle(vin)
+    return auth.status === "pending" && vehicle ? [{ vehicle, sentAt: auth.sentAt }] : []
+  })
+  const pendingCount = pending.length
+  const casesOpened =
+    TODAY_STATS.casesOpened + slots.filter(([, a]) => a.status === "escalated").length
 
   return (
     <div className="flex flex-col gap-8">
@@ -70,7 +75,7 @@ export function Home() {
         <StatTile
           label="Cases opened"
           value={casesOpened}
-          hint="Routed to law enforcement or insurers"
+          hint="Routed to law enforcement"
           icon={<FileWarning aria-hidden />}
         />
       </div>
@@ -94,26 +99,34 @@ export function Home() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {auth.status === "pending" && liveVehicle ? (
-              <Link
-                to={`/vehicle/${liveVehicle.vin}`}
-                className="flex flex-col gap-2 rounded-lg border p-3 transition-[background-color] hover:bg-muted/60"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium">{vehicleTitle(liveVehicle)}</span>
-                  <OutcomeBadge label="Pending" />
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Plate <span className="font-mono tracking-wider">{liveVehicle.plate}</span> · sent{" "}
-                  {formatTime(auth.sentAt)}
-                </div>
-              </Link>
+            {pending.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {pending.map(({ vehicle, sentAt }) => (
+                  <Link
+                    key={vehicle.vin}
+                    to={paths.portal.vehicle(vehicle.vin)}
+                    className="flex flex-col gap-2 rounded-lg border p-3 transition-[background-color] hover:bg-muted/60"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium">{vehicleTitle(vehicle)}</span>
+                      <OutcomeBadge label="Pending" />
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Plate <span className="font-mono tracking-wider">{vehicle.plate}</span> · sent{" "}
+                      {formatTime(sentAt)}
+                    </div>
+                  </Link>
+                ))}
+              </div>
             ) : (
               <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-4">
                 <p className="text-sm text-muted-foreground">
                   No requests are waiting on a registered owner right now.
                 </p>
-                <Link to="/requests" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                <Link
+                  to={paths.portal.requests}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
                   View all requests
                 </Link>
               </div>

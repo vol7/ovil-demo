@@ -9,24 +9,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import type { AuthorizationState } from "@/lib/authorization"
 import { formatTime } from "@/lib/format"
 import { REQUEST_ROWS, type RequestRow } from "@/lib/seed"
 import { useSession } from "@/lib/session"
 import { findVehicle, vehicleTitle } from "@/lib/vehicles"
 
-function liveRow(
-  vin: string | null,
-  auth: ReturnType<typeof useSession>[0]["authorization"]
-): RequestRow | null {
-  const vehicle = vin ? findVehicle(vin) : undefined
+function liveRow(vin: string, auth: AuthorizationState): RequestRow | null {
+  const vehicle = findVehicle(vin)
   if (!vehicle) return null
+  const online = (name: string, origin: string) => (origin === "buyer" ? `${name} (online)` : name)
   switch (auth.status) {
     case "pending":
       return {
         reference: "—",
         vehicle: vehicleTitle(vehicle),
         plate: vehicle.plate,
-        applicant: auth.origin === "buyer" ? `${auth.requester} (online)` : auth.requester,
+        applicant: online(auth.requester, auth.origin),
         status: "Pending",
         when: `Today, ${formatTime(auth.sentAt)}`,
       }
@@ -38,10 +37,8 @@ function liveRow(
         applicant:
           auth.origin === "owner"
             ? "Registered owner (pre-approval)"
-            : auth.origin === "buyer"
-              ? `${auth.requester} (online)`
-              : auth.requester,
-        status: "Authorized",
+            : online(auth.requester, auth.origin),
+        status: auth.issued ? "Issued" : "Authorized",
         when: `Today, ${formatTime(auth.approvedAt)}`,
       }
     case "frozen":
@@ -49,7 +46,7 @@ function liveRow(
         reference: "—",
         vehicle: vehicleTitle(vehicle),
         plate: vehicle.plate,
-        applicant: auth.origin === "buyer" ? `${auth.requester} (online)` : auth.requester,
+        applicant: online(auth.requester, auth.origin),
         status: auth.reason === "timeout" ? "Expired" : "Frozen",
         when: `Today, ${formatTime(auth.frozenAt)}`,
       }
@@ -60,8 +57,11 @@ function liveRow(
 
 export function Requests() {
   const [session] = useSession()
-  const live = liveRow(session.vin, session.authorization)
-  const rows = live ? [live, ...REQUEST_ROWS] : REQUEST_ROWS
+  const live = Object.entries(session.authorizations).flatMap(([vin, auth]) => {
+    const row = liveRow(vin, auth)
+    return row ? [row] : []
+  })
+  const rows = [...live, ...REQUEST_ROWS]
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,7 +86,7 @@ export function Requests() {
               {rows.map((row, i) => (
                 <TableRow
                   key={`${row.plate}-${i}`}
-                  className={i === 0 && live ? "bg-primary/[0.03]" : undefined}
+                  className={i < live.length ? "bg-primary/[0.03]" : undefined}
                 >
                   <TableCell className="pl-6 font-mono text-xs tracking-wider">
                     {row.reference}
